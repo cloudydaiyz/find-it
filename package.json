@@ -1,0 +1,23 @@
+{
+  "name": "the-great-hunt",
+  "version": "1.0.0",
+  "description": "Scavenger hunt game backend",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cloudydaiyz/the-great-hunt.git"
+  },
+  "author": "Kylan Duncan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cloudydaiyz/the-great-hunt/issues"
+  },
+  "homepage": "https://github.com/cloudydaiyz/the-great-hunt#readme",
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
