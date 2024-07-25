@@ -6,9 +6,11 @@ import assert from "assert";
 // General Types //
 /*****************/
 
-type TaskType = "none" | "multiple choice" | "short answer" | "paragraph";
+// Question type for a task
+export type TaskType = "multiple choice" | "text";
 
-type TaskGameInfo = {
+// All the information about a game task
+export type TaskInfo = {
     taskid: string;
     type: TaskType;
     clue: string;
@@ -17,38 +19,42 @@ type TaskGameInfo = {
     points: number;
     required: boolean;
     attempts: number; // 0 for infinite
-}
 
-type Task = TaskGameInfo & {
-    answers: string[]; // empty = accepts any answer
+    answers: number[]; // the index of the correct answers for this task, empty = accepts any answer
     scalePoints: boolean; // scale points based on time, automatically false if duration is infinite
 };
 
-type TaskSubmission = {
+// Info that the game presents to players about a task
+export type Task = Omit<TaskInfo, "answers" | "scalePoints">;
+
+// All the information about a player's task submission
+export type TaskSubmissionInfo = {
     taskid: string,
     answers: string[],
-};
 
-type TaskSubmissionInfo = TaskSubmission & {
     submissionTime: number,
     success: boolean
 }
 
-type PlayerStats = { 
+// The information a player submits for a task
+export type TaskSubmission = Omit<TaskSubmissionInfo, "submissionTime" | "success">;
+
+// All the information about a player
+export type Player = {
     name: string, 
     points: number, 
     numTasksSubmitted: number 
-}
 
-type Player = {
     playerid: string;
-    name: string;
-    points: number;
     tasksSubmitted: TaskSubmissionInfo[];
     done: boolean;
 };
 
-type GameSettings = {
+// The publicly viewable information about a player's stats
+export type PlayerStats = Omit<Player, "playerid" | "tasksSubmitted" | "done">;
+
+// The settings for the game
+export type GameSettings = {
     name: string;
     duration: number; // 0 for infinite
     startTime: number;
@@ -56,9 +62,11 @@ type GameSettings = {
     ordered: boolean; // false if tasks in the game are unordered
 };
 
-type GameState = 'not ready' | 'ready' | 'running' | 'ended';
+// The different states of a game's lifecycle
+export type GameState = 'not ready' | 'ready' | 'running' | 'ended';
 
-type GameStats = {
+// All the information about a game
+export type Game = {
     gameid: string;
     settings: GameSettings; // can't edit if game is running or ended
     numTasks: number;
@@ -68,19 +76,20 @@ type GameStats = {
     numPlayers: number;
     joinMidGame: boolean;
     state: GameState;
-}
 
-type Game = GameStats & {
-    tasks: Task[]; // tasks in order
+    tasks: TaskInfo[]; // tasks in order
     players: Player[];
     hostid: string;
 }
 
-type CreateGameConfirmation = { 
+// The publicly viewable stats about a game
+export type GameStats = Omit<Game, "tasks" | "players" | "hostid">;
+
+// The information sent on confirm that a game was successfully created
+export type CreateGameConfirmation = { 
     gameid: string, 
     hostid: string 
 };
-
 
 /*************/
 // Constants //
@@ -96,7 +105,7 @@ const games : Game[] = [];
  * Generates a 16 byte hex string that can be used as an ID
  * @returns generated ID
  */
-function generateId() {
+export function generateId() {
     // return crypto.randomUUID;
     return crypto.randomBytes(16).toString("hex");
 }
@@ -109,7 +118,7 @@ function generateId() {
  * @param errormsg the message to send when the listiem isn't found
  * @returns the listitem
  */
-function search<GameType>(list: GameType[], handler: (listitem: GameType) => boolean, errormsg: string) {
+export function search<GameType>(list: GameType[], handler: (listitem: GameType) => boolean, errormsg: string) {
     const obj = list.find(handler);
     assert(obj != undefined, errormsg);
 
@@ -121,7 +130,7 @@ function search<GameType>(list: GameType[], handler: (listitem: GameType) => boo
 /******************/
 
 // Creates a new game from the given configuration
-function createGame(settings: GameSettings, tasks: Task[], minPlayers: number, maxPlayers: number, joinMidGame: boolean): CreateGameConfirmation {
+export function createGame(settings: GameSettings, tasks: TaskInfo[], minPlayers: number, maxPlayers: number, joinMidGame: boolean): CreateGameConfirmation {
     const newGame: Game = {
         gameid: generateId(),
         settings: settings,
@@ -139,14 +148,23 @@ function createGame(settings: GameSettings, tasks: Task[], minPlayers: number, m
     games.push(newGame);
     tasks.forEach(t => t.taskid = generateId()); // generate random IDs for tasks
 
+    // TODO: If a game has a scheduled start time (start time > 0), schedule the game to
+    // start (NOT end since the start time may be delayed) @ start time via EventBridge Scheduler
+
     return {
         gameid: newGame.gameid,
         hostid: newGame.hostid
     };
 }
 
+export function getGame(gameid: string) {
+    return games.find(g => g.gameid == gameid);
+}
+
 // Adds a new player to the game
-function joinGame(gameid: string, playerName: string) {
+// Returns the new player ID
+// Only a new player should call this
+export function joinGame(gameid: string, playerName: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
     assert(game.state == "running" && game.joinMidGame || game.state != "ended", "Invalid game state");
 
@@ -155,6 +173,7 @@ function joinGame(gameid: string, playerName: string) {
         name: playerName,
         points: 0,
         tasksSubmitted: [],
+        numTasksSubmitted: 0,
         done: false
     };
     game.players.push(player);
@@ -164,12 +183,13 @@ function joinGame(gameid: string, playerName: string) {
 }
 
 // Removes a player
-// Only the host can call this
-function leaveGame(gameid: string, playerid: string) {
+// Only the host or the player can call this
+export function leaveGame(gameid: string, playerid: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
     const player = search(game.players, p => p.playerid == playerid, "Can't find specified player");
     assert(game.state != "ended", "Invalid game state");
 
+    player.done = true;
     game.players = game.players.filter(p => p.playerid != playerid);
     game.numPlayers--;
     return player;
@@ -177,9 +197,11 @@ function leaveGame(gameid: string, playerid: string) {
 
 // Begins a game
 // Only the host can call this
-function startGame(gameid: string) {
+export function startGame(gameid: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
     assert(game.state == "ready", "Invalid game state, can't start game");
+
+    // TODO: Call EventBridge scheduler to schedule the end time
 
     game.state = "running";
     game.settings.startTime = Date.now();
@@ -190,9 +212,11 @@ function startGame(gameid: string) {
 
 // Ends a game
 // Only the host can call this
-function stopGame(gameid: string) {
+export function stopGame(gameid: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
-    assert(game.state == "running", "Invalid game state, can't stop game");
+    assert(game.state != "ended", "Game already ended");
+
+    // TODO: Cancel EventBridge scheduler
 
     game.state = "ended";
     game.settings.endTime = Date.now();
@@ -201,7 +225,7 @@ function stopGame(gameid: string) {
 
 // Restarts the game
 // Only the host can call this
-function restartGame(gameid: string) {
+export function restartGame(gameid: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
     assert(game.state == "ended", "Invalid game state, can't restart game");
 
@@ -211,7 +235,7 @@ function restartGame(gameid: string) {
 
 // View all the game's tasks
 // Only the host can call this
-function viewAllTasks(gameid: string) {
+export function viewAllTasks(gameid: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
 
     return game.tasks;
@@ -219,7 +243,7 @@ function viewAllTasks(gameid: string) {
 
 // View a specific tasks
 // Only the host can call this
-function viewTask(gameid: string, taskid: string) {
+export function viewTask(gameid: string, taskid: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
     const task = search(game.tasks, t => t.taskid == taskid, "Can't find specified task");
 
@@ -228,11 +252,11 @@ function viewTask(gameid: string, taskid: string) {
 
 // View the public info for a specific task
 // The host and player can call this
-function viewTaskInfo(gameid: string, taskid: string) {
+export function viewTaskInfo(gameid: string, taskid: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
     const task = search(game.tasks, t => t.taskid == taskid, "Can't find specified task");
 
-    const taskInfo: TaskGameInfo = {
+    const taskInfo: Task = {
         taskid: task.taskid,
         type: task.type,
         clue: task.clue,
@@ -247,7 +271,7 @@ function viewTaskInfo(gameid: string, taskid: string) {
 
 // View the public stats for the current game
 // The host and player can call this
-function viewGameStats(gameid: string) {
+export function viewGameStats(gameid: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
 
     const stats: GameStats = {
@@ -266,7 +290,7 @@ function viewGameStats(gameid: string) {
 
 // Submit a task
 // Only the player can call this
-function submitTask(gameid: string, playerid: string, submission: TaskSubmission) {
+export function submitTask(gameid: string, playerid: string, submission: TaskSubmission) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
     const player = search(game.players, p => p.playerid == playerid, "Can't find specified player");
     const task = search(game.tasks, t => t.taskid == submission.taskid, "Can't find specified task");
@@ -275,7 +299,7 @@ function submitTask(gameid: string, playerid: string, submission: TaskSubmission
 
     const submissionTime = Date.now();
     const taskSuccessful = task.answers.length == 0 ? true 
-        : task.answers.every(ans => submission.answers.find(sub => ans == sub) != undefined);
+        : task.answers.every(ans => submission.answers.find(sub => task.answerChoices[ans] == sub) != undefined);
     let points = task.points;
 
     // Scale the points given based on the time
@@ -304,7 +328,7 @@ function submitTask(gameid: string, playerid: string, submission: TaskSubmission
 
 // View the public stats for a player
 // The host and player can call this
-function viewPlayerStats(gameid: string, playerid: string) {
+export function viewPlayerStats(gameid: string, playerid: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
     const player = search(game.players, p => p.playerid == playerid, "Can't find specified player");
     
