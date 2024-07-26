@@ -1,5 +1,5 @@
 import assert from "assert";
-import * as main from "../src/main";
+import * as main from "../src/core";
 
 /* HELPERS */
 
