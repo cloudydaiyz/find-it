@@ -2,4 +2,5 @@ node_modules/
 dist/
 
 TODO.md
-src/secrets.ts
+.env
+secrets.ts

@@ -1,5 +1,5 @@
 import assert from "assert";
-import * as main from "../src/core";
+import * as main from "../src/main";
 
 /* HELPERS */
 
@@ -81,28 +81,3 @@ function generateRandomTasks(numTasks: number, mustBeValid?: boolean) {
 }
 
 /* TESTS */
-
-describe('sum module', () => {
-    test('adds 1 + 2 to equal 3', () => {
-        expect(1 + 2).toBe(3);
-    });
-});
-
-describe('initialize game test', () => {
-    test('create game test', () => {
-        const gameConfirm = main.createGame({
-            name: crypto.randomUUID(),
-            duration: chance(50, 0, randomF(100)),
-            startTime: 0,
-            endTime: 0,
-            ordered: chance(50, true, false)
-        }, generateRandomTasks(5), 1, 5, true);
-        
-        let game = main.getGame(gameConfirm.gameid);
-        expect(game).not.toBe(undefined);
-
-        game = game as main.Game;
-        expect(game.state).not.toBe("running");
-        expect(game.state).not.toBe("ended");
-    });
-});

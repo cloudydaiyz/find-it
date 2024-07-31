@@ -1,6 +1,8 @@
 import { adminCodes } from "./secrets";
 import crypto from "crypto";
 import assert from "assert";
+import { Collection, Db, Document, MongoClient, WithId } from "mongodb";
+import jwt from "jsonwebtoken";
 
 /*****************/
 // General Types //
@@ -60,6 +62,10 @@ export type GameSettings = {
     startTime: number;
     endTime: number; // startTime + duration, 0 for infinite, may end early
     ordered: boolean; // false if tasks in the game are unordered
+    playerAuth: boolean
+    minPlayers: number; // can be 0 if people can join mid game
+    maxPlayers: number;
+    joinMidGame: boolean;
 };
 
 // The different states of a game's lifecycle
@@ -71,19 +77,16 @@ export type Game = {
     settings: GameSettings; // can't edit if game is running or ended
     numTasks: number;
     numRequiredTasks: number;
-    minPlayers: number; // can be 0 if people can join mid game
-    maxPlayers: number;
     numPlayers: number;
-    joinMidGame: boolean;
     state: GameState;
 
     tasks: TaskInfo[]; // tasks in order
     players: Player[];
     hostid: string;
-}
+};
 
 // The publicly viewable stats about a game
-export type GameStats = Omit<Game, "tasks" | "players" | "hostid">;
+export type GameStats = Omit<Game, "tasks" | "players" | "hostid" | "playerAuth">;
 
 // The information sent on confirm that a game was successfully created
 export type CreateGameConfirmation = { 
@@ -95,7 +98,10 @@ export type CreateGameConfirmation = {
 // Constants //
 /*************/
 
-const games : Game[] = [];
+const games: Game[] = [];
+const client = new MongoClient(process.env['MONGODB_CONNECTION_STRING'] as string);
+
+let db: Db;
 
 /********************/
 // Helper functions //
@@ -130,7 +136,7 @@ export function search<GameType>(list: GameType[], handler: (listitem: GameType)
 /******************/
 
 // Creates a new game from the given configuration
-export function createGame(settings: GameSettings, tasks: TaskInfo[], minPlayers: number, maxPlayers: number, joinMidGame: boolean): CreateGameConfirmation {
+export function createGame(settings: GameSettings, tasks: TaskInfo[]): CreateGameConfirmation {
     const newGame: Game = {
         gameid: generateId(),
         settings: settings,
@@ -141,9 +147,6 @@ export function createGame(settings: GameSettings, tasks: TaskInfo[], minPlayers
         numPlayers: 0,
         hostid: generateId(),
         state: "not ready",
-        minPlayers: minPlayers,
-        maxPlayers: maxPlayers,
-        joinMidGame: joinMidGame
     };
     games.push(newGame);
     tasks.forEach(t => t.taskid = generateId()); // generate random IDs for tasks
@@ -166,7 +169,7 @@ export function getGame(gameid: string) {
 // Only a new player should call this
 export function joinGame(gameid: string, playerName: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
-    assert(game.state == "running" && game.joinMidGame || game.state != "ended", "Invalid game state");
+    assert(game.state == "running" && game.settings.joinMidGame || game.state != "ended", "Invalid game state");
 
     const player = {
         playerid: generateId(),
@@ -230,7 +233,7 @@ export function restartGame(gameid: string) {
     assert(game.state == "ended", "Invalid game state, can't restart game");
 
     // Make a new game from the old game's stats
-    return createGame(game.settings, game.tasks, game.minPlayers, game.maxPlayers, game.joinMidGame);
+    return createGame(game.settings, game.tasks);
 }
 
 // View all the game's tasks
@@ -279,10 +282,7 @@ export function viewGameStats(gameid: string) {
         settings: game.settings,
         numTasks: game.numTasks,
         numRequiredTasks: game.numRequiredTasks,
-        minPlayers: game.minPlayers,
-        maxPlayers: game.maxPlayers,
         numPlayers: game.numPlayers,
-        joinMidGame: game.joinMidGame,
         state: game.state
     }
     return stats;
@@ -327,10 +327,10 @@ export function submitTask(gameid: string, playerid: string, submission: TaskSub
 }
 
 // View the public stats for a player
-// The host and player can call this
-export function viewPlayerStats(gameid: string, playerid: string) {
+// Only the host can call this
+export function viewPlayerStats(gameid: string, name: string) {
     const game = search(games, g => g.gameid == gameid, "Can't find specified game");
-    const player = search(game.players, p => p.playerid == playerid, "Can't find specified player");
+    const player = search(game.players, p => p.name == name, "Can't find specified player");
     
     const playerStats: PlayerStats = {
         name: player.name,
@@ -339,3 +339,76 @@ export function viewPlayerStats(gameid: string, playerid: string) {
     }
     return playerStats;
 }
+
+// The host can call this, and the player IF player auth is enabled
+export function logIn(gameid: string) {
+    const game = search(games, g => g.gameid == gameid, "Can't find specified game");
+
+    var token = jwt.sign({ 
+        game: gameid,
+        foo: 'bar' 
+    }, gameid + process.env['JWT_SECRET_KEY']);
+    return token;
+}
+
+// The host can call this, and the player IF player auth is enabled
+export function signUp(gameid: string) {
+    const game = search(games, g => g.gameid == gameid, "Can't find specified game");
+
+    var token = jwt.sign({ 
+        game: gameid,
+        foo: 'bar' 
+    }, gameid + process.env['JWT_SECRET_KEY']);
+    return token;
+}
+
+// Only the host can call this
+export function viewAllPlayers(gameid: string) {
+    const game = search(games, g => g.gameid == gameid, "Can't find specified game");
+
+    return game.players;
+}
+
+// The host and player can call this
+export function viewPlayer(gameid: string, name: string) {
+    const game = search(games, g => g.gameid == gameid, "Can't find specified game");
+    const player = search(game.players, p => p.name == name, "Can't find specified player");
+
+    return player;
+}
+
+// Only the player themselves can call this
+export function viewAllSubmittedTasks(gameid: string) {
+    const game = search(games, g => g.gameid == gameid, "Can't find specified game");
+
+}
+
+// The host and player can call this
+export function viewAllPlayerStats(gameid: string) {
+    const game = search(games, g => g.gameid == gameid, "Can't find specified game");
+
+}
+
+// INITALIZATION AND CLOSE FUNCTIONS
+
+export async function initCore() {
+    db = await client.db("sample_mflix");
+
+    const collection = await db.collection("movies");
+    // const body = await collection.find().limit(10).toArray();
+    // console.log(body);
+}
+
+export async function closeCore() {
+    return client.close();
+}
+
+/*
+** RUN CODE
+*/
+(async () => {
+    initCore();
+    closeCore();
+    
+    console.log(logIn('12345'));
+})();
