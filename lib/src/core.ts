@@ -1,16 +1,16 @@
 import jwt, { JwtPayload } from "jsonwebtoken";
-import { Condition, MongoClient, ObjectId, SetFields, UpdateFilter, WithId } from "mongodb";
+import { Collection, Condition, Db, MongoClient, ObjectId, SetFields, UpdateFilter, WithId } from "mongodb";
 import assert from "assert";
 import "dotenv/config";
 
-import { AccessCredentials, GameSchema, GameSettings, PlayerSchema, PublicTaskSchema, TaskSchema, TaskSubmission, UserRole, UserSchema, UserToken } from "./types";
+import { AccessCredentials, CreateGameConfirmation, GameSchema, GameSettings, PlayerSchema, PublicTaskSchema, TaskSchema, TaskSubmission, UserRole, UserSchema, UserToken } from "./types";
 import { adminCodes } from "./secrets";
 
-let client = new MongoClient(process.env['MONGODB_CONNECTION_STRING'] as string);
-let db = client.db("the-great-hunt");
-let userColl = db.collection<UserSchema>("users");
-let gameColl = db.collection<GameSchema>("games");
-let playerColl = db.collection<PlayerSchema>("players");
+let client: MongoClient;
+let db: Db;
+let userColl: Collection<UserSchema>;
+let gameColl: Collection<GameSchema>;
+let playerColl: Collection<PlayerSchema>;
 
 /* UTILITY FUNCTIONS */
 
@@ -21,11 +21,25 @@ let playerColl = db.collection<PlayerSchema>("players");
  * @param requiredRoles Options for the roles the token should have
  * @returns The decoded token
  */
-function verifyToken(token: string, gameId: ObjectId, requiredRoles?: UserRole[]) {
+export function verifyToken(token: string, gameId: ObjectId, requiredRoles?: UserRole[]) {
     const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
     assert(decodedToken.gameId == gameId, "Invalid token; wrong game");
-    assert(requiredRoles?.includes(decodedToken.role as UserRole), "Invalid credentials");
+    assert(requiredRoles?.includes(decodedToken.role as UserRole) != false, "Invalid credentials");
     return decodedToken;
+}
+
+export function setClient(c: MongoClient) {
+    if(client) client.close();
+
+    client = c;
+    db = client.db("the-great-hunt");
+    userColl = db.collection<UserSchema>("users");
+    gameColl = db.collection<GameSchema>("games");
+    playerColl = db.collection<PlayerSchema>("players");
+}
+
+export function getClient() {
+    return client;
 }
 
 /***********************************************/
@@ -36,7 +50,7 @@ function verifyToken(token: string, gameId: ObjectId, requiredRoles?: UserRole[]
 
 // Creates a new user
 export async function signup(username: string, password: string) {
-    assert(await userColl.findOne({username: username}) != null, 'User already exists');
+    assert(await userColl.findOne({username: username}) == null, 'User already exists');
     
     const res = await userColl.insertOne({
         username: username,
@@ -44,7 +58,7 @@ export async function signup(username: string, password: string) {
     });
 }
 
-// Creates an access token
+// Generates an access token and refresh token
 export async function login(username: string, password: string) {
     const user = await userColl.findOne({
         username: username,
@@ -62,7 +76,6 @@ export async function login(username: string, password: string) {
             process.env['ACCESS_TOKEN_KEY'] as string, 
             { expiresIn: "15min" }
         );
-
         const refresh_token = jwt.sign(
             creds, 
             process.env['REFRESH_TOKEN_KEY'] as string, 
@@ -78,6 +91,7 @@ export async function login(username: string, password: string) {
     throw new Error('Invalid credentials');
 }
 
+// Generates a new access token from a refresh token
 export async function refresh(token: string) {
     let accessToken: string | null = null;
 
@@ -122,8 +136,10 @@ export async function createGame(token: string, settings: GameSettings, tasks: T
         admins: [],
         host: decodedToken.username
     });
+    assert(res.acknowledged && res.insertedId != null, "Create operation unsuccessful");
 
-    return joinGame(token, res.insertedId, "host");
+    const creds = await joinGame(token, res.insertedId, "host");
+    return {creds: creds, gameid: res.insertedId.toString() } as CreateGameConfirmation;
 }
 
 export async function joinGame(token: string, gameId: ObjectId, role: UserRole, code?: string) {
@@ -134,23 +150,34 @@ export async function joinGame(token: string, gameId: ObjectId, role: UserRole, 
     const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
     const game = await gameColl.findOne({ _id: gameId });
     assert(game, "Invalid game ID");
-    assert(!game.players.includes(decodedToken.username) && decodedToken.username != game.host, 
+    assert(decodedToken.username == game.host || !game.players.includes(decodedToken.username), 
         "User already in game");
 
-    // Decide the fields to update the game with based on the specified role
-    let fields: SetFields<GameSchema> = {
-        "players": decodedToken.username,
-    };
-    if(role == "admin") {
-        fields = {
-            "players": decodedToken.username,
-            "admins": decodedToken.username
-        };
-    } 
+    if(role != "host") {
+        const update: UpdateFilter<GameSchema> = {};
 
-    // Update the game's players (and admins if the new player is an admin)
-    const update = await gameColl.updateOne({ _id: gameId }, { $addToSet: fields });
-    assert(update.acknowledged && update.modifiedCount == 1, "Operation unsuccessful");
+        // Decide the fields to update the game's players & admins with based on 
+        // the specified role
+        let toAdd: SetFields<GameSchema> = {
+            "players": decodedToken.username,
+        };
+        if(role == "admin") {
+            toAdd = {
+                ...toAdd,
+                "admins": decodedToken.username
+            };
+        }
+        update.$addToSet = toAdd;
+
+        // Update the game's state if there's now enough players
+        if(game.state == "not ready" && game.players.length == game.settings.minPlayers - 1) {
+            update.$set = { "state": "ready" };
+        }
+
+        // Update the game's players (and admins if the new player is an admin), and 
+        const res = await gameColl.updateOne({ _id: gameId }, update);
+        assert(res.acknowledged && res.modifiedCount == 1, "Operation unsuccessful");
+    }
 
     // Create upgraded credentials
     const creds: UserToken = {
@@ -173,9 +200,9 @@ export async function joinGame(token: string, gameId: ObjectId, role: UserRole, 
     );
 
     return {
-        access_token: access_token,
-        refresh_token: refresh_token
-    }
+        accessToken: access_token,
+        refreshToken: refresh_token
+    } as AccessCredentials;
 }
 
 export async function getGame(gameId: ObjectId) {
@@ -193,7 +220,7 @@ export async function listGames() {
 export async function leaveGame(token: string, gameId: ObjectId) {
     const decodedToken = verifyToken(token, gameId);
 
-    const result = await gameColl.updateOne({ _id: decodedToken.gameId }, { $pull: {
+    const result = await gameColl.updateOne({ _id: gameId }, { $pull: {
         players: decodedToken.username
     } });
     assert(result.acknowledged && result.modifiedCount == 1, "No player removed");
@@ -218,18 +245,17 @@ export async function startGame(token: string, gameId: ObjectId) {
     assert(result.acknowledged && result.modifiedCount == 1, "Failed to start game");
 
     // TODO: Set a timer to end the game at the specified time
-    // Wait until EventBridge Scheduler is implemented
     if(game!.settings.duration > 0) {
 
     }
 }
 
 export async function stopGame(token: string, gameId: ObjectId) {
-    const decodedToken = verifyToken(token, gameId, ["host", "admin"]);
+    verifyToken(token, gameId, ["host", "admin"]);
 
     // Ensure the game is in the ready state
     const game = await gameColl.findOne({ _id: gameId });
-    assert(game!.state == "ready", "Invalid game state");
+    assert(game!.state == "running", "Invalid game state");
 
     const currentTime = Date.now();
     const result = await gameColl.updateOne({ _id: gameId }, {
@@ -242,7 +268,7 @@ export async function stopGame(token: string, gameId: ObjectId) {
 }
 
 export async function restartGame(token: string, gameId: ObjectId) {
-    const decodedToken = verifyToken(token, gameId, ["host", "admin"]);
+    verifyToken(token, gameId, ["host", "admin"]);
 
     // Ensure the game exists and has ended
     const game = await gameColl.findOne({ _id: gameId });
@@ -355,3 +381,8 @@ export async function submitTask(token: string, gameId: ObjectId, taskId: Object
     );
     assert(update.acknowledged && update.modifiedCount == 1);
 }
+
+(async() => {
+    // console.log("Hello world!");
+    // setClient(new MongoClient(process.env['MONGODB_CONNECTION_STRING'] as string));
+})();

@@ -1,18 +1,19 @@
 {
   "name": "the-great-hunt-lib",
   "version": "1.0.0",
-  "description": "Scavenger hunt game backend",
-  "main": "dist/main.js",
+  "description": "The Great Hunt game engine backend library",
+  "main": "",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/src/core.js",
+    "prestart": "npm run build",
+    "start": "node dist/core.js",
     "test": "jest"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cloudydaiyz/the-great-hunt.git"
   },
-  "author": "Kylan Duncan",
+  "author": "Kylan Duncan <kyland03.biz@gmail.com> (https://cloudydaiyz.com)",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/cloudydaiyz/the-great-hunt/issues"
@@ -22,12 +23,13 @@
     "@types/jest": "^29.5.12",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.14.12",
+    "dotenv": "^16.4.5",
     "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.0.0",
     "ts-jest": "^29.2.3",
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.8.0"
   }

@@ -80,3 +80,8 @@ export interface AccessCredentials {
     accessToken: string,
     refreshToken: string
 }
+
+export type CreateGameConfirmation = {
+    creds: AccessCredentials,
+    gameid: string
+};
