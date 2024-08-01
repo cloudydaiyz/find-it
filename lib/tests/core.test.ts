@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from "@jest/globals";
-import { setClient, login, getClient, signup, verifyToken, refresh, createGame, joinGame, getGame, listGames, leaveGame, startGame, stopGame, restartGame } from "../src/core"
+import { setClient, login, getClient, signup, verifyToken, refresh, createGame, joinGame, getGame, listGames, leaveGame, startGame, stopGame, restartGame, viewAllPublicTasks, viewAllTasks, viewPublicTask, viewTask, viewAllPlayers, submitTask, viewPlayer } from "../src/core"
 import { FindCursor, MongoClient, ObjectId } from "mongodb";
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import jwt from "jsonwebtoken";
@@ -10,7 +10,6 @@ const envVars = [ "MONGODB_CONNECTION_STRING", "ACCESS_TOKEN_KEY", "REFRESH_TOKE
 
 let mongod: MongoMemoryServer;
 let c: MongoClient;
-let gameId: ObjectId;
 
 /* CONSTANTS */
 
@@ -132,7 +131,8 @@ describe("authentication", () => {
     });
 });
 
-describe("game functions", () => {
+describe("game management", () => {
+    let gameId: ObjectId;
     
     test("createGame", async () => {
         const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
@@ -188,3 +188,112 @@ describe("game functions", () => {
         expect(newGame).toHaveProperty("creds.refreshToken");
     });
 });
+
+describe("task management", () => {
+    let gameId: ObjectId;
+    let chosenTask: ObjectId;
+
+    beforeAll(async () => {
+        const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
+        gameId = new ObjectId(game.gameid);
+        users[0].creds = game.creds;
+    });
+
+    test("viewAllPublicTasks", async () => {
+        const publicTasks = await viewAllPublicTasks(gameId);
+        expect(publicTasks).toBeInstanceOf(Array);
+        expect(publicTasks.length).toBeGreaterThan(0);
+        for (const task of publicTasks) {
+            expect(task).toHaveProperty("_id");
+            expect(task).toHaveProperty("type");
+            expect(task).toHaveProperty("question");
+            expect(task).toHaveProperty("clue");
+            expect(task).toHaveProperty("answerChoices");
+            expect(task).toHaveProperty("attempts");
+            expect(task).toHaveProperty("required");
+            expect(task).toHaveProperty("points");
+            expect(task).toHaveProperty("scalePoints");
+        }
+    });
+
+    test("viewAllTasks", async () => {
+        const tasks = await viewAllTasks(users[0].creds.accessToken, gameId);
+        expect(tasks).toBeInstanceOf(Array);
+        expect(tasks.length).toBeGreaterThan(0);
+
+        // chosenTask = tasks[Math.floor(Math.random() * tasks.length)]._id;
+        chosenTask = tasks[0]._id;
+    });
+
+    test("viewPublicTask", async () => {
+        const publicTask = await viewPublicTask(gameId, chosenTask);
+        expect(publicTask).toHaveProperty("_id", chosenTask);
+        expect(publicTask).toHaveProperty("type", tasks[0].type);
+        expect(publicTask).toHaveProperty("question", tasks[0].question);
+        expect(publicTask).toHaveProperty("clue", tasks[0].clue);
+        expect(publicTask).toHaveProperty("answerChoices", tasks[0].answerChoices);
+        expect(publicTask).toHaveProperty("attempts", tasks[0].attempts);
+        expect(publicTask).toHaveProperty("required", tasks[0].required);
+        expect(publicTask).toHaveProperty("points", tasks[0].points);
+        expect(publicTask).toHaveProperty("scalePoints", tasks[0].scalePoints);
+    });
+
+    test("viewTask", async () => {
+        const task = await viewTask(users[0].creds.accessToken, gameId, chosenTask);
+        expect(task).toHaveProperty("_id", chosenTask);
+        expect(task).toHaveProperty("type", tasks[0].type);
+        expect(task).toHaveProperty("question", tasks[0].question);
+        expect(task).toHaveProperty("clue", tasks[0].clue);
+        expect(task).toHaveProperty("answerChoices", tasks[0].answerChoices);
+        expect(task).toHaveProperty("attempts", tasks[0].attempts);
+        expect(task).toHaveProperty("required", tasks[0].required);
+        expect(task).toHaveProperty("points", tasks[0].points);
+        expect(task).toHaveProperty("scalePoints", tasks[0].scalePoints);
+    });
+});
+
+describe("player management and task submission", () => {
+    let gameId: ObjectId;
+
+    beforeAll(async () => {
+        const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
+        gameId = new ObjectId(game.gameid);
+        users[0].creds = game.creds;
+
+        const result = await joinGame(users[1].creds.accessToken, gameId, "player");
+        users[1].creds = result;
+
+        await startGame(game.creds.accessToken, gameId);
+    });
+
+    test("viewAllPlayers", async () => {
+        const players = await viewAllPlayers(gameId);
+        expect(players).toBeInstanceOf(FindCursor);
+
+        const playersArray = await players.toArray();
+        expect(playersArray).toHaveLength(1);
+        expect(playersArray[0].username).toBe(users[1].username);
+    });
+
+    test("viewPlayer", async () => {
+        const player = await viewPlayer(gameId, users[1].username);
+        expect(player).toBeDefined();
+        expect(player!.username).toBe(users[1].username);
+    });
+
+    test("submitTask", async () => {
+        const taskId = tasks[0]._id;
+        const taskId2 = tasks[1]._id;
+        await submitTask(users[1].creds.accessToken, gameId, taskId, ["4"]);
+        
+        let player = await viewPlayer(gameId, users[1].username);
+        const taskSubmission = player!.tasksSubmitted.find((submission: any) => submission.taskid.toString() === taskId.toString());
+        expect(taskSubmission).toBeDefined();
+        expect(taskSubmission!.success).toBe(true);
+        expect(player!.done).toBe(false);
+
+        await submitTask(users[1].creds.accessToken, gameId, taskId2, ["Paris"]);
+        player = await viewPlayer(gameId, users[1].username);
+        expect(player!.done).toBe(true);
+    });
+})

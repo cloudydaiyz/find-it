@@ -127,6 +127,7 @@ export async function refresh(token: string) {
 
 export async function createGame(token: string, settings: GameSettings, tasks: TaskSchema[]) {
     const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
+    tasks.forEach(t => t._id == new ObjectId());
 
     const res = await gameColl.insertOne({
         tasks: tasks,
@@ -174,9 +175,18 @@ export async function joinGame(token: string, gameId: ObjectId, role: UserRole, 
             update.$set = { "state": "ready" };
         }
 
+        const playerCollRes = await playerColl.insertOne({
+            gameId: gameId,
+            username: decodedToken.username,
+            points: 0,
+            tasksSubmitted: [],
+            done: game.settings.numRequiredTasks == 0 ? true : false
+        });
+        assert(playerCollRes.acknowledged && playerCollRes.insertedId != null, "Create operation unsuccessful");
+
         // Update the game's players (and admins if the new player is an admin), and 
-        const res = await gameColl.updateOne({ _id: gameId }, update);
-        assert(res.acknowledged && res.modifiedCount == 1, "Operation unsuccessful");
+        const gameCollRes = await gameColl.updateOne({ _id: gameId }, update);
+        assert(gameCollRes.acknowledged && gameCollRes.modifiedCount == 1, "Operation unsuccessful");
     }
 
     // Create upgraded credentials
@@ -309,7 +319,7 @@ export async function viewAllTasks(token: string, gameId: ObjectId) {
 
 export async function viewPublicTask(gameId: ObjectId, taskId: ObjectId) {
     const game = await gameColl.findOne({ _id: gameId });
-    const task = game!.tasks.find(t => t._id == taskId);
+    const task = game!.tasks.find(t => t._id.toString() == taskId.toString());
     assert(task != undefined, "Invalid task ID");
 
     const publicTask: PublicTaskSchema = {
@@ -330,7 +340,7 @@ export async function viewTask(token: string, gameId: ObjectId, taskId: ObjectId
     verifyToken(token, gameId, ["host", "admin"]);
 
     const game = await gameColl.findOne({ _id: gameId });
-    const task = game!.tasks.find(t => t._id == taskId);
+    const task = game!.tasks.find(t => t._id.toString() == taskId.toString());
     assert(task != undefined, "Invalid task ID");
     return task;
 }
@@ -342,8 +352,8 @@ export async function viewAllPlayers(gameId: ObjectId) {
     return players;
 }
 
-export async function viewPlayer(gameId: ObjectId, playerId: string) {
-    const player = playerColl.find({ _id: new ObjectId(playerId), gameId: gameId });
+export async function viewPlayer(gameId: ObjectId, username: string) {
+    const player = playerColl.findOne({ username: username, gameId: gameId });
     return player;
 }
 
@@ -351,7 +361,8 @@ export async function submitTask(token: string, gameId: ObjectId, taskId: Object
     const decodedToken = verifyToken(token, gameId, ["player"]);
 
     const game = await gameColl.findOne({ _id: gameId });
-    const task = game!.tasks.find(t => t._id == taskId);
+    const task = game!.tasks.find(t => t._id.toString() == taskId.toString());
+    assert(game!.state == "running", "Game is not running");
     assert(task != undefined, "Invalid task ID");
 
     const taskSuccessful = task.answers.length == 0 ? 
@@ -365,6 +376,7 @@ export async function submitTask(token: string, gameId: ObjectId, taskId: Object
         success: taskSuccessful
     };
 
+    // Calculate the number of points the player should receive
     let points = task.points;
     if(taskSuccessful) {
         if(task.scalePoints) {
@@ -375,14 +387,22 @@ export async function submitTask(token: string, gameId: ObjectId, taskId: Object
         points = Math.abs(points) * -1;
     }
 
-    const update = await playerColl.updateOne(
-        { _id: decodedToken.userid }, 
-        { $inc: { points: points } }
+    // Update the player
+    const playerUpdate = await playerColl.updateOne(
+        { username: decodedToken.username, gameId: gameId }, 
+        { $push: { tasksSubmitted: submission }, $inc: { points: points } }
     );
-    assert(update.acknowledged && update.modifiedCount == 1);
-}
+    assert(playerUpdate.acknowledged && playerUpdate.modifiedCount == 1, "Task submission update failed");
 
-(async() => {
-    // console.log("Hello world!");
-    // setClient(new MongoClient(process.env['MONGODB_CONNECTION_STRING'] as string));
-})();
+    // Check if the player has completed the minimum required tasks
+    const player = await playerColl.findOne({ username: decodedToken.username, gameId: gameId });
+    const completedTasksCount = player!.tasksSubmitted.filter(t => t.success).length;
+
+    if (completedTasksCount >= game!.settings.numRequiredTasks) {
+        const doneUpdate = await playerColl.updateOne(
+            { username: decodedToken.username, gameId: gameId },
+            { $set: { done: true } }
+        );
+        assert(doneUpdate.acknowledged && doneUpdate.modifiedCount == 1, "Failed to update player's done status");
+    }
+}
