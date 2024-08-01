@@ -13,7 +13,6 @@ export interface UserToken extends JwtPayload {
     gameId?: ObjectId;
     role?: UserRole;
 }
-
 export type UserRole = "player" | "host" | "admin";
 
 // All the information about a game
@@ -26,6 +25,7 @@ export interface GameSchema {
     admins: string[];
     players: string[];
 };
+export type GameState = 'not ready' | 'ready' | 'running' | 'ended';
 
 export interface GameSettings {
     name: string;
@@ -38,8 +38,6 @@ export interface GameSettings {
     joinMidGame: boolean;
     numRequiredTasks: number;
 };
-
-export type GameState = 'not ready' | 'ready' | 'running' | 'ended';
 
 // All the information about a game task
 export interface TaskSchema {
@@ -55,7 +53,6 @@ export interface TaskSchema {
     points: number;
     scalePoints: boolean; // scale points based on time, automatically false if duration is infinite
 };
-
 export type TaskType = "multiple choice" | "text";
 
 // The public information about a task
@@ -77,4 +74,9 @@ export interface TaskSubmission {
     answers: string[];
     submissionTime: number;
     success: boolean;
+}
+
+export interface AccessCredentials {
+    accessToken: string,
+    refreshToken: string
 }

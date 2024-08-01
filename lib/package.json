@@ -1,5 +1,5 @@
 {
-  "name": "the-great-hunt",
+  "name": "the-great-hunt-lib",
   "version": "1.0.0",
   "description": "Scavenger hunt game backend",
   "main": "dist/main.js",
@@ -19,7 +19,6 @@
   },
   "homepage": "https://github.com/cloudydaiyz/the-great-hunt#readme",
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.142",
     "@types/jest": "^29.5.12",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.14.12",
