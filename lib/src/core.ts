@@ -360,14 +360,21 @@ export async function viewPlayer(gameId: ObjectId, username: string) {
 export async function submitTask(token: string, gameId: ObjectId, taskId: ObjectId, answers: string[]) {
     const decodedToken = verifyToken(token, gameId, ["player"]);
 
+    // Retrieve the game from the database
     const game = await gameColl.findOne({ _id: gameId });
-    const task = game!.tasks.find(t => t._id.toString() == taskId.toString());
     assert(game!.state == "running", "Game is not running");
+
+    // Verify the task exists in the game
+    const task = game!.tasks.find(t => t._id.toString() == taskId.toString());
     assert(task != undefined, "Invalid task ID");
 
+    // Retrieve the player from the database
+    const player = await playerColl.findOne({ username: decodedToken.username, gameId: gameId });
+
+    // Check if the task was successful and create a new task submission for the player
     const taskSuccessful = task.answers.length == 0 ? 
         true : task.answers.every(i => answers.includes(task.answerChoices[i]));
-
+    
     const submission: TaskSubmission = {
         _id: new ObjectId(),
         taskid: taskId,
@@ -383,7 +390,21 @@ export async function submitTask(token: string, gameId: ObjectId, taskId: Object
             const durationDelta = submission.submissionTime - game!.settings.startTime + 0.01;
             points = Math.round(task.points * (1 - durationDelta / game!.settings.duration));
         }
+
+        // Check if the player has completed the minimum required tasks
+        const completedTasksCount = player!.tasksSubmitted.filter(t => t.success).length;
+
+        // Update the player's done state if it hasn't already been updated
+        if (!player!.done && completedTasksCount >= game!.settings.numRequiredTasks - 1) {
+            const doneUpdate = await playerColl.updateOne(
+                { username: decodedToken.username, gameId: gameId },
+                { $set: { done: true } }
+            );
+            assert(doneUpdate.acknowledged && doneUpdate.modifiedCount == 1, "Failed to update player's done status");
+        }
     } else {
+        // Decrement the player's points for a bad submission (same even if scalePoints is true)
+        // Do this even if they've already successfully submitted this task... lol
         points = Math.abs(points) * -1;
     }
 
@@ -393,16 +414,4 @@ export async function submitTask(token: string, gameId: ObjectId, taskId: Object
         { $push: { tasksSubmitted: submission }, $inc: { points: points } }
     );
     assert(playerUpdate.acknowledged && playerUpdate.modifiedCount == 1, "Task submission update failed");
-
-    // Check if the player has completed the minimum required tasks
-    const player = await playerColl.findOne({ username: decodedToken.username, gameId: gameId });
-    const completedTasksCount = player!.tasksSubmitted.filter(t => t.success).length;
-
-    if (completedTasksCount >= game!.settings.numRequiredTasks) {
-        const doneUpdate = await playerColl.updateOne(
-            { username: decodedToken.username, gameId: gameId },
-            { $set: { done: true } }
-        );
-        assert(doneUpdate.acknowledged && doneUpdate.modifiedCount == 1, "Failed to update player's done status");
-    }
 }

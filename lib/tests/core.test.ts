@@ -67,6 +67,11 @@ describe("utilities", () => {
             expect(typeof process.env[envVar]).toBe("string");
         }
     });
+
+    test("object id matches toString", () => {
+        const objid = new ObjectId();
+        expect(objid).toEqual(new ObjectId(objid.toString()));
+    })
 });
 
 beforeAll(async () => {
@@ -236,6 +241,8 @@ describe("task management", () => {
         expect(publicTask).toHaveProperty("required", tasks[0].required);
         expect(publicTask).toHaveProperty("points", tasks[0].points);
         expect(publicTask).toHaveProperty("scalePoints", tasks[0].scalePoints);
+
+        expect(publicTask).not.toHaveProperty("answers", tasks[0].answers);
     });
 
     test("viewTask", async () => {
@@ -249,6 +256,8 @@ describe("task management", () => {
         expect(task).toHaveProperty("required", tasks[0].required);
         expect(task).toHaveProperty("points", tasks[0].points);
         expect(task).toHaveProperty("scalePoints", tasks[0].scalePoints);
+        
+        expect(task).toHaveProperty("answers", tasks[0].answers);
     });
 });
 
@@ -294,6 +303,7 @@ describe("player management and task submission", () => {
 
         await submitTask(users[1].creds.accessToken, gameId, taskId2, ["Paris"]);
         player = await viewPlayer(gameId, users[1].username);
+        console.log(player);
         expect(player!.done).toBe(true);
     });
 })
