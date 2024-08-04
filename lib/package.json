@@ -1,18 +1,21 @@
 {
-  "name": "the-great-hunt-lib",
-  "version": "1.0.0",
-  "description": "The Great Hunt game engine backend library",
-  "main": "",
-  "scripts": {
-    "build": "tsc",
-    "prestart": "npm run build",
-    "start": "node dist/core.js",
-    "test": "jest"
-  },
+  "name": "@cloudydaiyz/game-engine-lib",
+  "version": "1.1.0",
+  "description": "Game engine backend library",
+  "main": "dist/index.js",
+  "types": "dist/index.d.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cloudydaiyz/the-great-hunt.git"
+    "url": "git+https://github.com/cloudydaiyz/the-great-hunt.git",
+    "directory": "lib"
   },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "game",
+    "engine"
+  ],
   "author": "Kylan Duncan <kyland03.biz@gmail.com> (https://cloudydaiyz.com)",
   "license": "ISC",
   "bugs": {
@@ -32,5 +35,10 @@
   "dependencies": {
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.8.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "build": "tsc",
+    "prepublish": "npm run build && npm run test"
   }
 }

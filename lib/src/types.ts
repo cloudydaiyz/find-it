@@ -67,6 +67,15 @@ export interface PlayerSchema {
     done: boolean;
 };
 
+export interface PublicPlayerSchema {
+    gameId: ObjectId;
+    username: string;
+    points: number;
+    numTasksSubmitted: number;
+    numTasksCompleted: number;
+    done: boolean;
+}
+
 // All the information about a player's task submission
 export interface TaskSubmission {
     _id: ObjectId;

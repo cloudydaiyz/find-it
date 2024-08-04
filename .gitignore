@@ -4,3 +4,4 @@ dist/
 TODO.md
 .env
 secrets.ts
+tsconfig.test.json

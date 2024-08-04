@@ -1,8 +1,13 @@
-import { describe, test, expect, beforeAll, afterAll } from "@jest/globals";
-import { setClient, login, getClient, signup, verifyToken, refresh, createGame, joinGame, getGame, listGames, leaveGame, startGame, stopGame, restartGame, viewAllPublicTasks, viewAllTasks, viewPublicTask, viewTask, viewAllPlayers, submitTask, viewPlayer } from "../src/core"
+import { describe, test, expect, beforeAll, afterAll, it } from "@jest/globals";
 import { FindCursor, MongoClient, ObjectId } from "mongodb";
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import jwt from "jsonwebtoken";
+
+import { setClient, getClient } from "../src/core"
+import { login, signup, refresh, verifyToken } from "../src/auth";
+import { createGame, joinGame, getGame, listGames, leaveGame, startGame, stopGame, restartGame } from "../src/game";
+import { viewAllPublicTasks, viewAllTasks, viewPublicTask, viewTask } from "../src/tasks";
+import { viewAllPlayers, submitTask, viewPlayer, viewAllPublicPlayers, viewPublicPlayer } from "../src/players";
 
 import "dotenv/config";
 import { AccessCredentials, GameSettings, TaskSchema } from "../src/types";
@@ -97,6 +102,10 @@ afterAll(async () => {
 describe("authentication", () => {
     test("connection", () => {
         expect(getClient()).toBe(c);
+    });
+
+    test("signup", async () => {
+        await expect(signup("another", "person")).resolves.not.toThrow();
     });
 
     test("invalid signup", async () => {
@@ -284,10 +293,26 @@ describe("player management and task submission", () => {
         expect(playersArray[0].username).toBe(users[1].username);
     });
 
+    test("viewAllPublicPlayers", async () => {
+        const players = await viewAllPublicPlayers(gameId);
+        expect(players).toBeInstanceOf(Array);
+
+        expect(players).toHaveLength(1);
+        expect(players[0].username).toBe(users[1].username);
+        expect(players[0]).not.toHaveProperty("tasksSubmitted");
+    });
+
     test("viewPlayer", async () => {
         const player = await viewPlayer(gameId, users[1].username);
         expect(player).toBeDefined();
         expect(player!.username).toBe(users[1].username);
+    });
+
+    test("viewPublicPlayer", async () => {
+        const player = await viewPublicPlayer(gameId, users[1].username);
+        expect(player).toBeDefined();
+        expect(player!.username).toBe(users[1].username);
+        expect(player).not.toHaveProperty("tasksSubmitted");
     });
 
     test("submitTask", async () => {
