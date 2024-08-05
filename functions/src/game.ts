@@ -8,7 +8,6 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
     let resBody: string;
 
     try {
-
         assert(event.headers.token != undefined, "Must have a token for this operation");
         resBody = "hi";
     } catch(e) {
@@ -23,4 +22,3 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
         body: resBody
     };
 }
-
