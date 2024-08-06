@@ -1,10 +1,13 @@
-import { createGame, getGame, restartGame, startGame, stopGame } from "@cloudydaiyz/game-engine-lib";
+import { setClient, createGame, getGame, restartGame, startGame, stopGame } from "@cloudydaiyz/game-engine-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
+import { MongoClient } from "mongodb";
 
 const gamePath = Path.createPath('/game');
 const specificGamePath = Path.createPath('/game/:gameid');
+
+setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
     const path = event.requestContext.http.path;

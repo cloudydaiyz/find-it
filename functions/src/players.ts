@@ -1,10 +1,13 @@
-import { joinGame, leaveGame, viewAllPlayers, viewAllPublicPlayers, viewPlayer, viewPublicPlayer } from "@cloudydaiyz/game-engine-lib";
+import { setClient, joinGame, leaveGame, viewAllPlayers, viewAllPublicPlayers, viewPlayer, viewPublicPlayer } from "@cloudydaiyz/game-engine-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
+import { MongoClient } from "mongodb";
 
 const playersPath = Path.createPath('/game/:gameid/players');
 const playerPath = Path.createPath('/game/:gameid/players/:username');
+
+setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
     const path = event.requestContext.http.path;

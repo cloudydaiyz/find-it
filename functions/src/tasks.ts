@@ -1,11 +1,14 @@
-import { viewAllTasks, viewAllPublicTasks, viewTask, viewPublicTask, submitTask } from "@cloudydaiyz/game-engine-lib";
+import { setClient, viewAllTasks, viewAllPublicTasks, viewTask, viewPublicTask, submitTask } from "@cloudydaiyz/game-engine-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
+import { MongoClient } from "mongodb";
 
 const tasksPath = Path.createPath('/game/:gameid/tasks');
 const taskPath = Path.createPath('/game/:gameid/tasks/:taskid');
 const submitPath = Path.createPath('/game/:gameid/tasks/:taskid/submit');
+
+setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
     const path = event.requestContext.http.path;

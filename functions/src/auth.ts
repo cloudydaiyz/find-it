@@ -1,10 +1,13 @@
-import { login, signup } from "@cloudydaiyz/game-engine-lib";
+import { setClient, login, signup } from "@cloudydaiyz/game-engine-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
+import { MongoClient } from "mongodb";
 
 const registerPath = Path.createPath('/game/:gameid/register');
 const loginPath = Path.createPath('/game/:gameid/login');
+
+setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
     const path = event.requestContext.http.path;
