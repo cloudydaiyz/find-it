@@ -1,6 +1,7 @@
-# the-great-hunt
-Scavenger hunt game. This repository serves as the backend.
+# game-center
+Game Center for cloudydaiyz.com. This repository contains the frontend, backend, and infrastructure.
 
-Frontend: (tbd)
-
-Infrastructure: (tbd)
+WIP:
+- Scavenger hunt
+- Family feud
+- Jeopardy
