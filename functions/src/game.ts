@@ -1,15 +1,52 @@
-import { } from "@cloudydaiyz/game-engine-lib";
-import { Context, LambdaFunctionURLHandler } from "aws-lambda";
-import { ObjectId } from "mongodb";
+import { createGame, getGame, restartGame, startGame, stopGame } from "@cloudydaiyz/game-engine-lib";
+import { LambdaFunctionURLHandler } from "aws-lambda";
+import { Path } from "path-parser";
 import assert from "assert";
 
+const gamePath = Path.createPath('/game');
+const specificGamePath = Path.createPath('/game/:gameid');
+
 export const handler: LambdaFunctionURLHandler = async(event) => {
-    const tokens = event.rawPath.split("/");
-    let resBody: string;
+    const path = event.requestContext.http.path;
+    const method = event.requestContext.http.method;
+    let result = {};
 
     try {
-        assert(event.headers.token != undefined, "Must have a token for this operation");
-        resBody = "hi";
+        const gamePathTest = gamePath.test(path);
+        const specificGamePathTest = specificGamePath.test(path);
+
+        if(gamePathTest) {
+            if(method == "GET") {
+                assert(event.body, "Must have an event body for this operation");
+                assert(event.headers.token != undefined, "Must have a token for this operation");
+                const body = JSON.parse(event.body!);
+                result = await createGame(event.headers.token, body.settings, body.tasks);
+            } else {
+                throw new Error("Method undefined for this operation");
+            }
+        } else if(specificGamePathTest) {
+            if(method == "GET") {
+                result = await getGame(specificGamePathTest.gameid);
+            } else if(method == "POST") {
+                assert(event.body, "Must have an event body for this operation");
+                assert(event.headers.token != undefined, "Must have a token for this operation");
+
+                const body = JSON.parse(event.body!);
+                if(body.action == "start") {
+                    await startGame(event.headers.token, specificGamePathTest.gameid);
+                } else if(body.action == "stop") {
+                    await stopGame(event.headers.token, specificGamePathTest.gameid);
+                } else if(body.action == "restart") {
+                    result = await restartGame(event.headers.token, specificGamePathTest.gameid);
+                } else {
+                    throw new Error("Invalid action");
+                }
+            } else {
+                throw new Error("Method undefined for this operation");
+            }
+        } else {
+            throw new Error("Invalid path");
+        }
     } catch(e) {
         return {
             statusCode: 400,
@@ -19,6 +56,6 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
 
     return {
         statusCode: 200,
-        body: resBody
+        body: JSON.stringify(result)
     };
 }

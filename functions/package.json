@@ -4,17 +4,19 @@
   "description": "Lambda functions for my game engine project",
   "main": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsc && node handlers/test.js"
   },
   "keywords": [],
   "author": "Kylan Duncan <kyland03.biz@gmail.com> (https://cloudydaiyz.com)",
   "license": "ISC",
   "dependencies": {
-    "@cloudydaiyz/game-engine-lib": "^1.1.0",
-    "mongodb": "^6.8.0"
+    "@cloudydaiyz/game-engine-lib": "^1.1.5",
+    "mongodb": "^6.8.0",
+    "path-parser": "^6.1.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.142",
-    "@types/node": "^22.1.0"
+    "@types/node": "^22.1.0",
+    "dotenv": "^16.4.5"
   }
 }

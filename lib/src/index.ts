@@ -11,3 +11,4 @@ export * from "./game";
 export * from "./players";
 export * from "./tasks";
 export * from "./types";
+export * from "./auth";

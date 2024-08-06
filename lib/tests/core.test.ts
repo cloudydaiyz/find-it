@@ -285,7 +285,7 @@ describe("player management and task submission", () => {
     });
 
     test("viewAllPlayers", async () => {
-        const players = await viewAllPlayers(gameId);
+        const players = await viewAllPlayers(users[0].creds.accessToken, gameId);
         expect(players).toBeInstanceOf(FindCursor);
 
         const playersArray = await players.toArray();
@@ -303,7 +303,7 @@ describe("player management and task submission", () => {
     });
 
     test("viewPlayer", async () => {
-        const player = await viewPlayer(gameId, users[1].username);
+        const player = await viewPlayer(users[1].creds.accessToken, gameId, users[1].username);
         expect(player).toBeDefined();
         expect(player!.username).toBe(users[1].username);
     });
@@ -320,14 +320,14 @@ describe("player management and task submission", () => {
         const taskId2 = tasks[1]._id;
         await submitTask(users[1].creds.accessToken, gameId, taskId, ["4"]);
         
-        let player = await viewPlayer(gameId, users[1].username);
+        let player = await viewPlayer(users[1].creds.accessToken, gameId, users[1].username);
         const taskSubmission = player!.tasksSubmitted.find((submission: any) => submission.taskid.toString() === taskId.toString());
         expect(taskSubmission).toBeDefined();
         expect(taskSubmission!.success).toBe(true);
         expect(player!.done).toBe(false);
 
         await submitTask(users[1].creds.accessToken, gameId, taskId2, ["Paris"]);
-        player = await viewPlayer(gameId, users[1].username);
+        player = await viewPlayer(users[1].creds.accessToken, gameId, users[1].username);
         console.log(player);
         expect(player!.done).toBe(true);
     });
