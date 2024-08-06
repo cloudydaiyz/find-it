@@ -28,6 +28,7 @@ export async function signup(username: string, password: string) {
         username: username,
         password: password
     });
+    assert(res.acknowledged && res.insertedId, "Unable to complete signup");
 }
 
 // Generates an access token and refresh token
