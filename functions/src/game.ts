@@ -1,4 +1,4 @@
-import { setClient, createGame, getGame, restartGame, startGame, stopGame } from "@cloudydaiyz/game-engine-lib";
+import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame } from "@cloudydaiyz/game-engine-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
@@ -12,6 +12,7 @@ setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
 export const handler: LambdaFunctionURLHandler = async(event) => {
     const path = event.requestContext.http.path;
     const method = event.requestContext.http.method;
+    let publicVisibility = event.queryStringParameters?.public == "false" ? false : true;
     let result = {};
 
     try {
@@ -20,6 +21,8 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
 
         if(gamePathTest) {
             if(method == "GET") {
+                result = { games: await listPublicGames() };
+            } else if(method == "POST") {
                 assert(event.body, "Must have an event body for this operation");
                 assert(event.headers.token != undefined, "Must have a token for this operation");
                 const body = JSON.parse(event.body!);
@@ -29,16 +32,21 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
             }
         } else if(specificGamePathTest) {
             if(method == "GET") {
-                result = await getGame(specificGamePathTest.gameid);
+                if(publicVisibility) {
+                    result = await getPublicGame(specificGamePathTest.gameid);
+                } else {
+                    assert(event.headers.token != undefined, "Must have a token for this operation");
+                    result = await getGame(event.headers.token, specificGamePathTest.gameid);
+                }
             } else if(method == "POST") {
                 assert(event.body, "Must have an event body for this operation");
                 assert(event.headers.token != undefined, "Must have a token for this operation");
 
                 const body = JSON.parse(event.body!);
                 if(body.action == "start") {
-                    await startGame(event.headers.token, specificGamePathTest.gameid);
+                    result = await startGame(event.headers.token, specificGamePathTest.gameid);
                 } else if(body.action == "stop") {
-                    await stopGame(event.headers.token, specificGamePathTest.gameid);
+                    result = await stopGame(event.headers.token, specificGamePathTest.gameid);
                 } else if(body.action == "restart") {
                     result = await restartGame(event.headers.token, specificGamePathTest.gameid);
                 } else {
@@ -53,7 +61,7 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
     } catch(e) {
         return {
             statusCode: 400,
-            message: (e as Error).message
+            body: (e as Error).message
         };
     }
 

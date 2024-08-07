@@ -1,7 +1,7 @@
 // Game management functions
 
 import jwt from "jsonwebtoken";
-import { AccessCredentials, CreateGameConfirmation, GameSchema, GameSettings, TaskSchema, UserRole, UserToken } from "./types";
+import { AccessCredentials, CreateGameConfirmation, GameSchema, GameSettings, PublicGameSchema, TaskSchema, UpdateGameStateConfirmation, UserRole, UserToken } from "./types";
 import { ObjectId, SetFields, UpdateFilter } from "mongodb";
 import { getGameColl, getPlayerColl, getAdminCodes } from "./core";
 import { verifyToken } from "./auth";
@@ -101,16 +101,45 @@ export async function joinGame(token: string, gameId: ObjectId, role: UserRole, 
     } as AccessCredentials;
 }
 
-export async function getGame(gameId: ObjectId) {
+export async function getGame(token: string, gameId: ObjectId) {
+    verifyToken(token, gameId, ["host", "admin"]);
+
     const game = await getGameColl().findOne({ _id: gameId });
     assert(game != null, "Invalid game");
 
     return game;
 }
 
-export async function listGames() {
+export async function getPublicGame(gameId: ObjectId) {
+    const game = await getGameColl().findOne({ _id: gameId });
+    assert(game != null, "Invalid game");
+
+    const publicGame: PublicGameSchema = {
+        settings: game.settings,
+        numTasks: game.tasks.length,
+        state: game.state,
+        host: game.host,
+        admins: game.admins,
+        players: game.players
+    };
+    return publicGame;
+}
+
+export async function listPublicGames() {
     const games = await getGameColl().find();
-    return games;
+    const publicGames: PublicGameSchema[] = [];
+
+    for(const game of await games.toArray()) {
+        publicGames.push({
+            settings: game.settings,
+            numTasks: game.tasks.length,
+            state: game.state,
+            host: game.host,
+            admins: game.admins,
+            players: game.players
+        });
+    }
+    return publicGames;
 }
 
 export async function leaveGame(token: string, gameId: ObjectId) {
@@ -131,11 +160,12 @@ export async function startGame(token: string, gameId: ObjectId) {
 
     // Update the start time and end time based on the game's duration
     const currentTime = Date.now();
+    const endTime = game!.settings.duration == 0 ? 0 : Date.now() + game!.settings.duration;
     const result = await getGameColl().updateOne({ _id: gameId }, {
         $set: {
             state: "running",
             "settings.startTime": currentTime,
-            "settings.endTime": game!.settings.duration == 0 ? 0 : Date.now() + game!.settings.duration
+            "settings.endTime": endTime
         }
     });
     assert(result.acknowledged && result.modifiedCount == 1, "Failed to start game");
@@ -144,6 +174,11 @@ export async function startGame(token: string, gameId: ObjectId) {
     if(game!.settings.duration > 0) {
 
     }
+
+    return {
+        startTime: currentTime,
+        endTime: endTime
+    } as UpdateGameStateConfirmation;
 }
 
 export async function stopGame(token: string, gameId: ObjectId) {
@@ -161,6 +196,11 @@ export async function stopGame(token: string, gameId: ObjectId) {
         }
     });
     assert(result.acknowledged && result.modifiedCount == 1, "Failed to end game");
+
+    return {
+        startTime: game!.settings.startTime,
+        endTime: currentTime
+    } as UpdateGameStateConfirmation;
 }
 
 export async function restartGame(token: string, gameId: ObjectId) {

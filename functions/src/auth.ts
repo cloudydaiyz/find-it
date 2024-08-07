@@ -19,11 +19,11 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
         const loginPathTest = loginPath.test(path);
 
         assert(event.body, "Must have an event body for this operation");
-
         const body = JSON.parse(event.body!);
         if(method == "POST") {
             if(registerPathTest) {
                 await signup(body.username, body.password);
+                result = { message: "User registered successfully" };
             } else if(loginPathTest) {
                 result = await login(body.username, body.password);
             } else {
@@ -35,7 +35,7 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
     } catch(e) {
         return {
             statusCode: 400,
-            message: (e as Error).message
+            body: (e as Error).message
         };
     }
 

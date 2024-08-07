@@ -1,6 +1,6 @@
 {
   "name": "@cloudydaiyz/game-engine-lib",
-  "version": "1.1.5",
+  "version": "1.2.5",
   "description": "Game engine backend library",
   "main": "dist/index.js",
   "types": "dist/index.d.js",
@@ -39,6 +39,6 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "prepublish": "npm run build && npm run test"
+    "prepare": "npm run test && npm run build"
   }
 }

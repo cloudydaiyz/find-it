@@ -17,7 +17,7 @@ export type UserRole = "player" | "host" | "admin";
 
 // All the information about a game
 export interface GameSchema {
-    settings: GameSettings; // immuntable once game is running or ended
+    settings: GameSettings; // immutable once game is running or ended
     tasks: TaskSchema[]; // tasks embedded in order (since they're static and don't change)
     state: GameState;
 
@@ -37,6 +37,17 @@ export interface GameSettings {
     maxPlayers: number;
     joinMidGame: boolean;
     numRequiredTasks: number;
+};
+
+// The public information about a task
+export interface PublicGameSchema {
+    settings: GameSettings;
+    numTasks: number;
+    state: GameState;
+
+    host: string;
+    admins: string[];
+    players: string[];
 };
 
 // All the information about a game task
@@ -94,3 +105,13 @@ export type CreateGameConfirmation = {
     creds: AccessCredentials,
     gameid: string
 };
+
+export type UpdateGameStateConfirmation = {
+    startTime: number,
+    endTime: number
+}
+
+export type TaskSubmissionConfirmation = {
+    submissionTime: number,
+    success: boolean
+}

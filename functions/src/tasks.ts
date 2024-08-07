@@ -48,7 +48,7 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
                 assert(event.headers.token != undefined, "Must have a token for this operation");
                 assert(event.body, "Must have a request body");
 
-                await submitTask(event.headers.token, taskPathTest!.gameid, taskPathTest!.taskid, JSON.parse(event.body).answers);
+                result = await submitTask(event.headers.token, submitPathTest!.gameid, submitPathTest!.taskid, JSON.parse(event.body).answers);
             } else {
                 throw new Error("Invalid request method");
             }
@@ -58,7 +58,7 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
     } catch(e) {
         return {
             statusCode: 400,
-            message: (e as Error).message
+            body: (e as Error).message
         };
     }
 

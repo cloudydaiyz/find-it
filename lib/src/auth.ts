@@ -93,5 +93,5 @@ export async function refresh(token: string) {
     });
 
     assert(accessToken != null, "Unable to retrieve access token");
-    return accessToken;
+    return accessToken as string;
 }

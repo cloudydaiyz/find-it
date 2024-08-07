@@ -30,11 +30,13 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
             } else if(method == "DELETE") {
                 assert(event.headers.token != undefined, "Must have a token for this operation");
                 await leaveGame(event.headers.token, playersPathTest!.gameid);
+                result = { message: "Left game successfully" };
             } else if(method == "POST") {
                 assert(event.headers.token != undefined, "Must have a token for this operation");
 
                 const body = event.body ? JSON.parse(event.body).code : undefined;
                 await joinGame(event.headers.token, playersPathTest!.gameid, body);
+                result = { message: "Joined game successfully" };
             } else {
                 throw new Error("Invalid request method");
             }
@@ -44,7 +46,10 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
                     result = await viewPublicPlayer(playerPathTest!.gameid, playerPathTest!.username);
                 } else {
                     assert(event.headers.token != undefined, "Must have a token for this operation");
-                    result = (await viewPlayer(event.headers.token, playerPathTest!.gameid, playerPathTest!.username))!;
+                    const player = await viewPlayer(event.headers.token, playerPathTest!.gameid, playerPathTest!.username);
+                    if(!player) throw new Error("Unable to find player");
+                    
+                    result = player;
                 }
             } else {
                 throw new Error("Invalid request method");
@@ -55,7 +60,7 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
     } catch(e) {
         return {
             statusCode: 400,
-            message: (e as Error).message
+            body: (e as Error).message
         };
     }
 

@@ -5,9 +5,9 @@ import jwt from "jsonwebtoken";
 
 import { setClient, getClient } from "../src/core"
 import { login, signup, refresh, verifyToken } from "../src/auth";
-import { createGame, joinGame, getGame, listGames, leaveGame, startGame, stopGame, restartGame } from "../src/game";
-import { viewAllPublicTasks, viewAllTasks, viewPublicTask, viewTask } from "../src/tasks";
-import { viewAllPlayers, submitTask, viewPlayer, viewAllPublicPlayers, viewPublicPlayer } from "../src/players";
+import { createGame, joinGame, getGame, leaveGame, startGame, stopGame, restartGame, getPublicGame, listPublicGames } from "../src/game";
+import { viewAllPublicTasks, viewAllTasks, viewPublicTask, viewTask, submitTask } from "../src/tasks";
+import { viewAllPlayers, viewPlayer, viewAllPublicPlayers, viewPublicPlayer } from "../src/players";
 
 import "dotenv/config";
 import { AccessCredentials, GameSettings, TaskSchema } from "../src/types";
@@ -166,33 +166,40 @@ describe("game management", () => {
     });
 
     test("getGame", async () => {
-        const game = await getGame(gameId);
+        const game = await getGame(users[0].creds.accessToken, gameId);
         expect(game).toHaveProperty("tasks");
         expect(game).toHaveProperty("settings");
         expect(game).toHaveProperty("state");
     });
 
-    test("listGames", async () => {
-        const games = await listGames();
-        expect(games).toBeInstanceOf(FindCursor);
-        expect(games.toArray()).resolves.not.toHaveLength(0);
+    test("getPublicGame", async () => {
+        const game = await getPublicGame(gameId);
+        expect(game).toHaveProperty("numTasks");
+        expect(game).toHaveProperty("settings");
+        expect(game).toHaveProperty("state");
+    });
+
+    test("listPublicGames", async () => {
+        const games = await listPublicGames();
+        expect(games).toBeInstanceOf(Array);
+        expect(games).not.toHaveLength(0);
     });
 
     test("startGame", async () => {
         await startGame(users[0].creds.accessToken, gameId);
-        const game = await getGame(gameId);
+        const game = await getPublicGame(gameId);
         expect(game.state).toBe("running");
     });
 
     test("leaveGame", async () => {
         await leaveGame(users[1].creds.accessToken, gameId);
-        const game = await getGame(gameId);
+        const game = await getPublicGame(gameId);
         expect(game.players).not.toContain(users[1].username);
     });
 
     test("stopGame", async () => {
         await stopGame(users[0].creds.accessToken, gameId);
-        const game = await getGame(gameId);
+        const game = await getPublicGame(gameId);
         expect(game.state).toBe("ended");
     });
 
@@ -286,11 +293,10 @@ describe("player management and task submission", () => {
 
     test("viewAllPlayers", async () => {
         const players = await viewAllPlayers(users[0].creds.accessToken, gameId);
-        expect(players).toBeInstanceOf(FindCursor);
+        expect(players).toBeInstanceOf(Array);
 
-        const playersArray = await players.toArray();
-        expect(playersArray).toHaveLength(1);
-        expect(playersArray[0].username).toBe(users[1].username);
+        expect(players).toHaveLength(1);
+        expect(players[0].username).toBe(users[1].username);
     });
 
     test("viewAllPublicPlayers", async () => {
