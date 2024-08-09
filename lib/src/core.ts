@@ -2,7 +2,6 @@
 
 import { GameSchema, PlayerSchema, UserSchema } from "./types";
 import { Collection, Db, MongoClient } from "mongodb";
-import "dotenv/config";
 
 let client: MongoClient;
 let db: Db;

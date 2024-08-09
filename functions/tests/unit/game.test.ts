@@ -1,13 +1,13 @@
 import { describe, expect, afterAll, it, jest } from "@jest/globals";
 import { APIGatewayProxyStructuredResultV2 } from "aws-lambda";
-import * as game from "../src/game";
+import * as game from "../../src/game";
 import "dotenv/config";
 
 jest.mock("@cloudydaiyz/game-engine-lib");
 jest.mock("mongodb");
 
 import { createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame } from "@cloudydaiyz/game-engine-lib";
-import { createEvent, exampleCallback, exampleContext } from "./testutils";
+import { createEvent, exampleCallback, exampleContext } from "../testutils";
 
 afterAll(async () => { 
     jest.restoreAllMocks();

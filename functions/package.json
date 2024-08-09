@@ -5,14 +5,16 @@
   "main": "",
   "type": "module",
   "scripts": {
-    "test": "jest",
-    "build": "npm run test && tsc"
+    "test": "npm i && jest",
+    "integration-test": "npm i && jest -c=jest-intg.config.cjs",
+    "build": "npm run test && tsc && node scripts/rename-js-to-mjs.js",
+    "prod": "npm run build && rm -r node_modules && npm i --omit=dev"
   },
   "keywords": [],
   "author": "Kylan Duncan <kyland03.biz@gmail.com> (https://cloudydaiyz.com)",
   "license": "ISC",
   "dependencies": {
-    "@cloudydaiyz/game-engine-lib": "^1.2.5",
+    "@cloudydaiyz/game-engine-lib": "^1.2.6",
     "mongodb": "^6.8.0",
     "path-parser": "^6.1.0"
   },

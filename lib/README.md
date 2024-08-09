@@ -1,5 +1,5 @@
 # game-engine-lib
-This is the official library for my game engine project.
+This is the official library for my game center project.
 
 In order for the functions to run correctly, you must have these environment variables set:
 - `MONGODB_CONNECTION_STRING` - URL for MongoDB Atlas database

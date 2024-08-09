@@ -1,6 +1,6 @@
 import { describe, expect, afterAll, it, jest } from "@jest/globals";
 import { APIGatewayProxyStructuredResultV2 } from "aws-lambda";
-import * as tasks from "../src/tasks";
+import * as tasks from "../../src/tasks";
 import "dotenv/config";
 
 jest.mock("@cloudydaiyz/game-engine-lib");
@@ -8,7 +8,7 @@ jest.mock("mongodb");
 
 import { TaskSubmissionConfirmation } from "@cloudydaiyz/game-engine-lib";
 import { viewAllTasks, viewAllPublicTasks, viewTask, viewPublicTask, submitTask } from "@cloudydaiyz/game-engine-lib";
-import { createEvent, exampleCallback, exampleContext } from "./testutils";
+import { createEvent, exampleCallback, exampleContext } from "../testutils";
 
 afterAll(async () => { 
     jest.restoreAllMocks();

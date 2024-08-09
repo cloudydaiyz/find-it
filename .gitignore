@@ -1,11 +1,15 @@
 node_modules/
 dist/
 handlers/
+infra/stage
+infra/test
 
 TODO.md
 .env
 secrets.ts
 tsconfig.test.json
+
+SECRETS.md
 
 # Local .terraform directories
 **/.terraform/*

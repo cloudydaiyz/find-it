@@ -1,6 +1,6 @@
 {
   "name": "@cloudydaiyz/game-engine-lib",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Game engine backend library",
   "main": "dist/index.js",
   "types": "dist/index.d.js",
