@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "npm i && jest",
-    "integration-test": "npm i && jest -c=jest-intg.config.cjs",
+    "integration-test": "npm i && jest -c=jest-integration.config.cjs",
     "build": "npm run test && tsc && node scripts/rename-js-to-mjs.js",
     "prod": "npm run build && rm -r node_modules && npm i --omit=dev"
   },
