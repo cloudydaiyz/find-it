@@ -4,8 +4,8 @@ import { Path } from "path-parser";
 import assert from "assert";
 import { MongoClient } from "mongodb";
 
-const registerPath = Path.createPath('/game/:gameid/register');
-const loginPath = Path.createPath('/game/:gameid/login');
+const registerPath = Path.createPath('/register');
+const loginPath = Path.createPath('/login');
 
 setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
 

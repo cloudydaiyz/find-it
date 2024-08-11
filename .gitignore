@@ -9,6 +9,11 @@ TODO.md
 secrets.ts
 tsconfig.test.json
 
+results.json
+endpoints.ts
+endpoints.js
+endpoints.mjs
+
 SECRETS.md
 
 # Local .terraform directories

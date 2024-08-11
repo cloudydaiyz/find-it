@@ -9,10 +9,14 @@ let userColl: Collection<UserSchema>;
 let gameColl: Collection<GameSchema>;
 let playerColl: Collection<PlayerSchema>;
 
-export function setClient(c: MongoClient) {
+export async function setClient(c: MongoClient) {
     if(client) client.close();
 
     client = c;
+    client = await client.connect();
+    await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
     db = client.db("the-great-hunt");
     userColl = db.collection<UserSchema>("users");
     gameColl = db.collection<GameSchema>("games");

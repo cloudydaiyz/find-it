@@ -18,7 +18,7 @@ describe("auth handler tests", () => {
     it("should register a user successfully", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/register",
+            "/register",
             "POST",
             { username: "testuser", password: "testpass" }
         );
@@ -32,7 +32,7 @@ describe("auth handler tests", () => {
     it("should login a user successfully", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/login",
+            "/login",
             "POST",
             { username: "testuser", password: "testpass" }
         );
@@ -45,7 +45,7 @@ describe("auth handler tests", () => {
     it("should return error for missing body", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/register",
+            "/register",
             "POST"
         );
 
@@ -57,7 +57,7 @@ describe("auth handler tests", () => {
     it("should return error for invalid path", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/invalid",
+            "/invalid",
             "POST",
             { username: "testuser", password: "testpass" }
         );
@@ -70,7 +70,7 @@ describe("auth handler tests", () => {
     it("should return error for undefined method", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/register",
+            "/register",
             "GET",
             { username: "testuser", password: "testpass" }
         );

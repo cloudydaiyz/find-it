@@ -14,7 +14,8 @@ function renameFilesInDir(directory) {
                 // Recurse into subdirectories
                 renameFilesInDir(fullPath);
             } else if (file.endsWith('.js')) {
-                const newFilePath = fullPath.replace('\.js$', '.mjs');
+                // Using /\.js$/ instead of '\.js$' to get the regex literal
+                const newFilePath = fullPath.replace(/\.js$/, '.mjs');
                 fs.rename(fullPath, newFilePath, (err) => {
                     if (err) throw err;
                     console.log(`Renamed: ${fullPath} -> ${newFilePath}`);

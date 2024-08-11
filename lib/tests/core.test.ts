@@ -82,7 +82,7 @@ describe("utilities", () => {
 beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     c = new MongoClient(mongod.getUri());
-    setClient(c);
+    await setClient(c);
 
     // Create access token for testing
     await signup("kylan", "duncan");
