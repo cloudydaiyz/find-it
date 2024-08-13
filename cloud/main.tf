@@ -18,21 +18,21 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 locals {
-  handlers = toset(["auth", "game", "players", "tasks"])
+  handlers   = toset(["auth", "game", "players", "tasks"])
   account_id = data.aws_caller_identity.current.account_id
-  region = data.aws_region.current.name
+  region     = data.aws_region.current.name
   env_vars = {
     "MONGODB_CONNECTION_STRING" = var.mongodb_connection_string,
-    "ACCESS_TOKEN_KEY" = var.access_token_key,
-    "REFRESH_TOKEN_KEY" = var.refresh_token_key,
-    "ADMIN_CODES" = var.admin_codes
+    "ACCESS_TOKEN_KEY"          = var.access_token_key,
+    "REFRESH_TOKEN_KEY"         = var.refresh_token_key,
+    "ADMIN_CODES"               = var.admin_codes
   }
 }
 
 # Zip files for lambda
 data "archive_file" "lambda" {
   for_each = local.handlers
-  type = "zip"
+  type     = "zip"
 
   # If the file is not in the current working directory you will need to include a
   # path.module in the filename.
@@ -46,7 +46,7 @@ data "archive_file" "lambda_layer" {
 
   # If the file is not in the current working directory you will need to include a
   # path.module in the filename.
-  source_dir = "${path.module}/stage/layer"
+  source_dir  = "${path.module}/stage/layer"
   output_path = "${path.module}/stage/zip/layer.zip"
 }
 

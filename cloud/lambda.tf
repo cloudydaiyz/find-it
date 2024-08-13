@@ -21,11 +21,11 @@ resource "aws_lambda_layer_version" "lambda_layer" {
 resource "aws_lambda_function" "controller" {
   for_each = local.handlers
 
-  filename      = data.archive_file.lambda[each.key].output_path
-  description = "${each.key} handler for game center project"
-  function_name = each.key
-  role          = aws_iam_role.iam_for_lambda[each.key].arn
-  handler       = "${each.key}.handler"
+  filename         = data.archive_file.lambda[each.key].output_path
+  description      = "${each.key} handler for game center project"
+  function_name    = each.key
+  role             = aws_iam_role.iam_for_lambda[each.key].arn
+  handler          = "${each.key}.handler"
   source_code_hash = data.archive_file.lambda[each.key].output_base64sha256
   layers = [
     aws_lambda_layer_version.lambda_layer.arn
@@ -44,12 +44,12 @@ resource "aws_lambda_function" "controller" {
 
 resource "aws_lambda_function_url" "controller" {
   for_each = local.handlers
-  
+
   function_name      = aws_lambda_function.controller[each.key].arn
   authorization_type = "NONE"
 }
 
 resource "local_file" "endpointsjs" {
-  content  = templatefile("${path.module}/endpoints.tpl", { endpoint_arns = { for k,v in aws_lambda_function_url.controller : k => v.function_url } })
+  content  = templatefile("${path.module}/endpoints.tpl", { endpoint_arns = { for k, v in aws_lambda_function_url.controller : k => v.function_url } })
   filename = "${path.module}/endpoints.js"
 }
