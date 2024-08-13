@@ -12,7 +12,7 @@ import json
 
 def main(args):
     functions_dir = Path(Path(__file__).parent, "..", "functions").resolve()
-    infra_dir = Path(Path(__file__).parent, "..", "infra").resolve()
+    infra_dir = Path(Path(__file__).parent, "..", "cloud").resolve()
 
     if(args['plan']):
         # `npm run build`
@@ -27,7 +27,7 @@ def main(args):
         out = subprocess.run(["terraform", "output", "-json"], cwd=str(infra_dir), capture_output=True, text=True)
         # print(out.args)
         # print(out.returncode)
-        
+
         return json.loads(out.stdout)
     
     if(not args['no_prod'] or not args['destroy']):
@@ -54,10 +54,10 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument("--plan", action="store_true", help="Include if you just want a plan of the TF configuration")
+    parser.add_argument("--plan", action="store_true", help="Include if you only want a plan of the TF configuration")
+    parser.add_argument("--output", action="store_true", help="Include if you only want the output of the current TF configuration")
     parser.add_argument("--no-prod", action="store_true", help="Include if you don't want to run `npm run prod`")
     parser.add_argument("--destroy", action="store_true", help="Include if you want to destroy the current TF configuration")
-    parser.add_argument("--output", action="store_true", help="Include if you want to destroy the current TF configuration")
     args = vars(parser.parse_args())
 
     main(args)
