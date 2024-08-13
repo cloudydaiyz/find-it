@@ -17,3 +17,15 @@ variable "admin_codes" {
   type = string
   description = "comma separated admin codes (e.g. `'h3ll0,w0rld'`)"
 }
+
+variable "aws_profile" {
+  type = string
+  description = "aws profile to deploy infrastructure on"
+  default = "default"
+}
+
+variable "region" {
+  type = string
+  description = "region to deploy aws infrastructure on"
+  default = "us-east-2"
+}

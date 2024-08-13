@@ -2,15 +2,20 @@ import { setClient, viewAllTasks, viewAllPublicTasks, viewTask, viewPublicTask, 
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
+import { z } from "zod";
 
 const tasksPath = Path.createPath('/game/:gameid/tasks');
 const taskPath = Path.createPath('/game/:gameid/tasks/:taskid');
 const submitPath = Path.createPath('/game/:gameid/tasks/:taskid/submit');
 
-setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
+const answersParser = z.string().array();
+
+const c = setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
+    await c;
+    
     const path = event.requestContext.http.path;
     const method = event.requestContext.http.method;
     let publicVisibility = event.queryStringParameters?.public == "false" ? false : true;
@@ -24,10 +29,10 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
         if(tasksPathTest) {
             if(method == "GET") {
                 if(publicVisibility) {
-                    result = await viewAllPublicTasks(tasksPathTest!.gameid);
+                    result = await viewAllPublicTasks(new ObjectId(tasksPathTest.gameid as string));
                 } else {
                     assert(event.headers.token != undefined, "Must have a token for this operation");
-                    result = await viewAllTasks(event.headers.token, tasksPathTest!.gameid);
+                    result = await viewAllTasks(event.headers.token, new ObjectId(tasksPathTest.gameid as string));
                 }
             } else {
                 throw new Error("Invalid request method");
@@ -35,10 +40,10 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
         } else if(taskPathTest) {
             if(method == "GET") {
                 if(publicVisibility) {
-                    result = await viewPublicTask(taskPathTest!.gameid, taskPathTest!.taskid);
+                    result = await viewPublicTask(new ObjectId(taskPathTest.gameid as string), new ObjectId(taskPathTest.taskid as string));
                 } else {
                     assert(event.headers.token != undefined, "Must have a token for this operation");
-                    result = await viewTask(event.headers.token, taskPathTest!.gameid, taskPathTest!.taskid);
+                    result = await viewTask(event.headers.token, new ObjectId(taskPathTest.gameid as string), new ObjectId(taskPathTest.taskid as string));
                 }
             } else {
                 throw new Error("Invalid request method");
@@ -48,7 +53,10 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
                 assert(event.headers.token != undefined, "Must have a token for this operation");
                 assert(event.body, "Must have a request body");
 
-                result = await submitTask(event.headers.token, submitPathTest!.gameid, submitPathTest!.taskid, JSON.parse(event.body).answers);
+                const parsedBody = JSON.parse(event.body);
+                assert(answersParser.safeParse(parsedBody.answers).success, "Invalid body");
+
+                result = await submitTask(event.headers.token, new ObjectId(submitPathTest.gameid as string), new ObjectId(submitPathTest.taskid as string), parsedBody.answers);
             } else {
                 throw new Error("Invalid request method");
             }

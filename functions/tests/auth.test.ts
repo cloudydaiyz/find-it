@@ -1,14 +1,13 @@
 import { describe, expect, afterAll, it, jest } from "@jest/globals";
 import { APIGatewayProxyStructuredResultV2 } from "aws-lambda";
-import * as auth from "../../src/auth";
-import "dotenv/config";
+import * as auth from "../src/auth";
 
 // Make sure to mock BEFORE importing the functions
 jest.mock("@cloudydaiyz/game-engine-lib");
 jest.mock("mongodb");
 
 import { login, signup } from "@cloudydaiyz/game-engine-lib";
-import { createEvent, exampleCallback, exampleContext } from "../testutils";
+import { createEvent, exampleCallback, exampleContext } from "./testutils";
 
 afterAll(async () => { 
     jest.restoreAllMocks();
@@ -22,7 +21,6 @@ describe("auth handler tests", () => {
             "POST",
             { username: "testuser", password: "testpass" }
         );
-        console.log(event);
 
         const result = await auth.handler(event, exampleContext, exampleCallback) as APIGatewayProxyStructuredResultV2;
         expect(result.statusCode).toBe(200);

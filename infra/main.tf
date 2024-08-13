@@ -10,8 +10,8 @@ terraform {
 # For resources
 provider "aws" {
   # alias   = "kduncan"
-  region  = "us-east-2"
-  profile = "kduncan"
+  region  = var.region
+  profile = var.aws_profile
 }
 
 data "aws_caller_identity" "current" {}

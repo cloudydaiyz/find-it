@@ -5,5 +5,5 @@ module.exports = {
   transform: {
     "^.+.tsx?$": ["ts-jest", {  }],
   },
-  rootDir: "tests/unit"
+  rootDir: "tests"
 };

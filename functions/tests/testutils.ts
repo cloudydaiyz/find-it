@@ -2,10 +2,6 @@ import { jest } from "@jest/globals";
 import { APIGatewayProxyEventQueryStringParameters, APIGatewayProxyEventV2 } from "aws-lambda";
 import "dotenv/config";
 
-// Make sure to mock BEFORE importing the functions
-jest.mock("@cloudydaiyz/game-engine-lib");
-jest.mock("mongodb");
-
 export const exampleContext = {
         callbackWaitsForEmptyEventLoop: false,
         functionName: "",

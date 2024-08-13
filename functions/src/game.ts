@@ -1,15 +1,46 @@
-import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame } from "@cloudydaiyz/game-engine-lib";
+import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings } from "@cloudydaiyz/game-engine-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
+import { MongoClient, ObjectId } from "mongodb";
+import { z } from "zod";
 import assert from "assert";
-import { MongoClient } from "mongodb";
+
+const c = setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
+
+// Type checking GameSettings, will be moved into lib soon
+const gameSettingsParser = z.object({
+    name: z.string(),
+    duration: z.number(),
+    startTime: z.number(),
+    endTime: z.number(),
+    ordered: z.boolean(),
+    minPlayers: z.number(),
+    maxPlayers: z.number(),
+    joinMidGame: z.boolean(),
+    numRequiredTasks: z.number(),
+});
+
+// Type checking TaskSchema, will be moved into lib soon
+const taskSchemaParser = z.object({
+    // _id: ObjectId, Unneeded since createGame already generates an ID
+    type: z.literal("multiple choice").or(z.literal("text")),
+    question: z.string(),
+    clue: z.string(),
+    answerChoices: z.string().array(),
+    answers: z.number().array(),
+
+    attempts: z.number(),
+    required: z.boolean(),
+    points: z.number(),
+    scalePoints: z.boolean()
+}).array();
 
 const gamePath = Path.createPath('/game');
 const specificGamePath = Path.createPath('/game/:gameid');
 
-setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
-
 export const handler: LambdaFunctionURLHandler = async(event) => {
+    await c;
+    
     const path = event.requestContext.http.path;
     const method = event.requestContext.http.method;
     let publicVisibility = event.queryStringParameters?.public == "false" ? false : true;
@@ -25,7 +56,10 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
             } else if(method == "POST") {
                 assert(event.body, "Must have an event body for this operation");
                 assert(event.headers.token != undefined, "Must have a token for this operation");
-                const body = JSON.parse(event.body!);
+
+                const body = JSON.parse(event.body);
+                assert(gameSettingsParser.safeParse(body.settings).success, "Invalid game settings");
+                assert(taskSchemaParser.safeParse(body.tasks).success, "Invalid tasks");
                 result = await createGame(event.headers.token, body.settings, body.tasks);
             } else {
                 throw new Error("Method undefined for this operation");
@@ -33,22 +67,23 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
         } else if(specificGamePathTest) {
             if(method == "GET") {
                 if(publicVisibility) {
-                    result = await getPublicGame(specificGamePathTest.gameid);
+                    result = await getPublicGame(new ObjectId(specificGamePathTest.gameid as string));
                 } else {
                     assert(event.headers.token != undefined, "Must have a token for this operation");
-                    result = await getGame(event.headers.token, specificGamePathTest.gameid);
+                    result = await getGame(event.headers.token, new ObjectId(specificGamePathTest.gameid as string));
                 }
             } else if(method == "POST") {
                 assert(event.body, "Must have an event body for this operation");
                 assert(event.headers.token != undefined, "Must have a token for this operation");
 
-                const body = JSON.parse(event.body!);
+                const body = JSON.parse(event.body);
+                
                 if(body.action == "start") {
-                    result = await startGame(event.headers.token, specificGamePathTest.gameid);
+                    result = await startGame(event.headers.token, new ObjectId(specificGamePathTest.gameid as string));
                 } else if(body.action == "stop") {
-                    result = await stopGame(event.headers.token, specificGamePathTest.gameid);
+                    result = await stopGame(event.headers.token, new ObjectId(specificGamePathTest.gameid as string));
                 } else if(body.action == "restart") {
-                    result = await restartGame(event.headers.token, specificGamePathTest.gameid);
+                    result = await restartGame(event.headers.token, new ObjectId(specificGamePathTest.gameid as string));
                 } else {
                     throw new Error("Invalid action");
                 }

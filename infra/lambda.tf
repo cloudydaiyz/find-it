@@ -49,12 +49,7 @@ resource "aws_lambda_function_url" "controller" {
   authorization_type = "NONE"
 }
 
-resource "local_file" "mjs" {
+resource "local_file" "endpointsjs" {
   content  = templatefile("${path.module}/endpoints.tpl", { endpoint_arns = { for k,v in aws_lambda_function_url.controller : k => v.function_url } })
-  filename = "${path.module}/endpoints.mjs"
-}
-
-resource "local_file" "ts" {
-  content  = templatefile("${path.module}/endpoints.tpl", { endpoint_arns = { for k,v in aws_lambda_function_url.controller : k => v.function_url } })
-  filename = "${path.module}/../functions/endpoints.ts"
+  filename = "${path.module}/endpoints.js"
 }

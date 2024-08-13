@@ -1,7 +1,7 @@
 // Authentication functions
 
 import assert from "assert";
-import { getUserColl } from "./core";
+import { getGameColl, getUserColl } from "./core";
 import jwt from "jsonwebtoken";
 import { AccessCredentials, UserRole, UserToken } from "./types";
 import { ObjectId } from "mongodb";
@@ -13,9 +13,9 @@ import { ObjectId } from "mongodb";
  * @param requiredRoles Options for the roles the token should have
  * @returns The decoded token
  */
-export function verifyToken(token: string, gameId: ObjectId, requiredRoles?: UserRole[]) {
+export function verifyToken(token: string, gameId?: ObjectId, requiredRoles?: UserRole[]) {
     const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
-    assert(decodedToken.gameId == gameId, "Invalid token; wrong game");
+    assert(!gameId || decodedToken.gameId == gameId, "Invalid token; wrong game");
     assert(requiredRoles?.includes(decodedToken.role as UserRole) != false, "Invalid credentials");
     return decodedToken;
 }
