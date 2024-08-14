@@ -7,7 +7,7 @@ jest.mock("mongodb");
 
 import { TaskSubmissionConfirmation } from "@cloudydaiyz/game-engine-lib";
 import { viewAllTasks, viewAllPublicTasks, viewTask, viewPublicTask, submitTask } from "@cloudydaiyz/game-engine-lib";
-import { createEvent, exampleCallback, exampleContext } from "./testutils";
+import { createEvent, exampleCallback, exampleContext } from "./test-utils";
 
 afterAll(async () => { 
     jest.restoreAllMocks();
