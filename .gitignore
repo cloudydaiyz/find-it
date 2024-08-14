@@ -19,6 +19,8 @@ SECRETS.md
 __pycache__
 .pytest_cache
 
+stage
+
 # Local .terraform directories
 **/.terraform/*
 
