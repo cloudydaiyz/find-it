@@ -11,8 +11,8 @@ import argparse
 import json
 
 def main(args):
-    functions_dir = Path(Path(__file__).parent, "..", "functions").resolve()
-    infra_dir = Path(Path(__file__).parent, "..", "cloud").resolve()
+    functions_dir = (Path(__file__).parent / ".." / "functions").resolve()
+    infra_dir = (Path(__file__).parent / ".." / "cloud").resolve()
 
     if(args['plan']):
         # `npm run build`
@@ -30,19 +30,19 @@ def main(args):
 
         return json.loads(out.stdout)
     
-    if(not args['no_prod'] or not args['destroy']):
+    if(not args['no_prod'] and not args['destroy']):
         # `mkdir -p stage/zip stage/layer/nodejs`
-        stage_zip_dir = Path(infra_dir, "stage", "zip")
+        stage_zip_dir = infra_dir / "stage" / "zip"
         stage_zip_dir.mkdir(parents=True, exist_ok=True)
 
-        stage_nodejs_dir = Path(infra_dir, "stage", "layer", "nodejs")
+        stage_nodejs_dir = infra_dir / "stage" / "layer" / "nodejs"
         stage_nodejs_dir.mkdir(parents=True, exist_ok=True)
 
         # `cd ../functions && npm run prod && cd ../infra`
         subprocess.run(["npm", "run", "prod"], cwd=str(functions_dir))
 
         # `cp -r ../functions/node_modules ./stage/layer/nodejs/node_modules`
-        shutil.copytree(Path(functions_dir, "node_modules"), Path(stage_nodejs_dir, "node_modules"), dirs_exist_ok=True)
+        shutil.copytree(functions_dir / "node_modules", stage_nodejs_dir / "node_modules", dirs_exist_ok=True)
 
     if(args['destroy']):
         # `terraform destroy -var-file="variables.tfvars" --auto-approve`

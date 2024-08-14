@@ -38,7 +38,7 @@ resource "aws_lambda_function" "controller" {
   }
 
   tags = {
-    Project = "game-center"
+    project = "vulture"
   }
 }
 
