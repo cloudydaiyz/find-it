@@ -9,13 +9,15 @@ let userColl: Collection<UserSchema>;
 let gameColl: Collection<GameSchema>;
 let playerColl: Collection<PlayerSchema>;
 
-export async function setClient(c: MongoClient) {
+// Sets the client for DB queries to a MongoClient with the given URI, and
+// the respective database and collections
+export async function setClient(uri: string) {
+    const c = new MongoClient(uri);
     if(client) client.close();
 
     client = c;
     client = await client.connect();
     await client.db("admin").command({ ping: 1 });
-    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
     db = client.db("the-great-hunt");
     userColl = db.collection<UserSchema>("users");
@@ -23,26 +25,32 @@ export async function setClient(c: MongoClient) {
     playerColl = db.collection<PlayerSchema>("players");
 }
 
+// Retrieves the MongoClient currently being used
 export function getClient() {
     return client;
 }
 
+// Retrieves the database currently being used
 export function getDb() {
     return db;
 }
 
+// Retrieves the user collection
 export function getUserColl() {
     return userColl;
 }
 
+// Retrieves the game collection
 export function getGameColl() {
     return gameColl;
 }
 
+// Retrieves the player collection
 export function getPlayerColl() {
     return playerColl;
 }
 
+// Retrieves the list of admin codes based on the ADMIN_CODE env variable
 export function getAdminCodes() {
     return process.env['ADMIN_CODES']?.split(',');
 }

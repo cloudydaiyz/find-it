@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll, it } from "@jest/globals";
-import { FindCursor, MongoClient, ObjectId } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import jwt from "jsonwebtoken";
 
@@ -81,8 +81,8 @@ describe("utilities", () => {
 
 beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
-    c = new MongoClient(mongod.getUri());
-    await setClient(c);
+    await setClient(mongod.getUri());
+    c = getClient();
 
     // Create access token for testing
     await signup("kylan", "duncan");
@@ -101,6 +101,7 @@ afterAll(async () => {
 
 describe("authentication", () => {
     test("connection", () => {
+        expect(getClient()).toBeDefined();
         expect(getClient()).toBe(c);
     });
 
@@ -146,7 +147,7 @@ describe("authentication", () => {
 });
 
 describe("game management", () => {
-    let gameId: ObjectId;
+    let gameId: string;
     
     test("createGame", async () => {
         const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
@@ -156,7 +157,7 @@ describe("game management", () => {
 
     test("joinGame", async () => {
         const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
-        gameId = new ObjectId(game.gameid);
+        gameId = game.gameid;
         users[0].creds = game.creds;
 
         const result = await joinGame(users[1].creds.accessToken, gameId, "player");
@@ -211,12 +212,12 @@ describe("game management", () => {
 });
 
 describe("task management", () => {
-    let gameId: ObjectId;
-    let chosenTask: ObjectId;
+    let gameId: string;
+    let chosenTask: string;
 
     beforeAll(async () => {
         const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
-        gameId = new ObjectId(game.gameid);
+        gameId = game.gameid;
         users[0].creds = game.creds;
     });
 
@@ -243,12 +244,12 @@ describe("task management", () => {
         expect(tasks.length).toBeGreaterThan(0);
 
         // chosenTask = tasks[Math.floor(Math.random() * tasks.length)]._id;
-        chosenTask = tasks[0]._id;
+        chosenTask = tasks[0]._id.toString();
     });
 
     test("viewPublicTask", async () => {
         const publicTask = await viewPublicTask(gameId, chosenTask);
-        expect(publicTask).toHaveProperty("_id", chosenTask);
+        expect(publicTask).toHaveProperty("_id", new ObjectId(chosenTask));
         expect(publicTask).toHaveProperty("type", tasks[0].type);
         expect(publicTask).toHaveProperty("question", tasks[0].question);
         expect(publicTask).toHaveProperty("clue", tasks[0].clue);
@@ -263,7 +264,7 @@ describe("task management", () => {
 
     test("viewTask", async () => {
         const task = await viewTask(users[0].creds.accessToken, gameId, chosenTask);
-        expect(task).toHaveProperty("_id", chosenTask);
+        expect(task).toHaveProperty("_id", new ObjectId(chosenTask));
         expect(task).toHaveProperty("type", tasks[0].type);
         expect(task).toHaveProperty("question", tasks[0].question);
         expect(task).toHaveProperty("clue", tasks[0].clue);
@@ -278,11 +279,11 @@ describe("task management", () => {
 });
 
 describe("player management and task submission", () => {
-    let gameId: ObjectId;
+    let gameId: string;
 
     beforeAll(async () => {
         const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
-        gameId = new ObjectId(game.gameid);
+        gameId = game.gameid;
         users[0].creds = game.creds;
 
         const result = await joinGame(users[1].creds.accessToken, gameId, "player");
@@ -322,8 +323,8 @@ describe("player management and task submission", () => {
     });
 
     test("submitTask", async () => {
-        const taskId = tasks[0]._id;
-        const taskId2 = tasks[1]._id;
+        const taskId = tasks[0]._id.toString();
+        const taskId2 = tasks[1]._id.toString();
         await submitTask(users[1].creds.accessToken, gameId, taskId, ["4"]);
         
         let player = await viewPlayer(users[1].creds.accessToken, gameId, users[1].username);

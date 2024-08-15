@@ -7,13 +7,19 @@ export interface UserSchema {
     password: string;
 }
 
+// JWT
 export interface UserToken extends JwtPayload {
     userid: ObjectId;
     username: string;
     gameId?: ObjectId;
     role?: UserRole;
 }
-export type UserRole = "player" | "host" | "admin";
+
+// Roles for players of a game
+export type PlayerRole = "player" | "admin";
+
+// Roles for users in a game
+export type UserRole = "host" | PlayerRole;
 
 // All the information about a game
 export interface GameSchema {
@@ -25,8 +31,11 @@ export interface GameSchema {
     admins: string[];
     players: string[];
 };
+
+// Different states of a game
 export type GameState = 'not ready' | 'ready' | 'running' | 'ended';
 
+// All settings for a game
 export interface GameSettings {
     name: string;
     duration: number; // 0 for infinite
@@ -64,6 +73,8 @@ export interface TaskSchema {
     points: number;
     scalePoints: boolean; // scale points based on time, automatically false if duration is infinite
 };
+
+// Allowed types for tasks
 export type TaskType = "multiple choice" | "text";
 
 // The public information about a task
@@ -78,6 +89,7 @@ export interface PlayerSchema {
     done: boolean;
 };
 
+// All the public information about a player
 export interface PublicPlayerSchema {
     gameId: ObjectId;
     username: string;
@@ -96,21 +108,25 @@ export interface TaskSubmission {
     success: boolean;
 }
 
+// Credentials to access resources as a user
 export interface AccessCredentials {
     accessToken: string,
     refreshToken: string
 }
 
+// Confirmation that a game was created
 export type CreateGameConfirmation = {
     creds: AccessCredentials,
     gameid: string
 };
 
+// Updated information about a game
 export type UpdateGameStateConfirmation = {
     startTime: number,
     endTime: number
 }
 
+// Confirmation on task submit
 export type TaskSubmissionConfirmation = {
     submissionTime: number,
     success: boolean

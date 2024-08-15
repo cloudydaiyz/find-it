@@ -3,11 +3,14 @@
 import { ObjectId } from "mongodb";
 import { getGameColl, getPlayerColl } from "./core";
 import { verifyToken } from "./auth";
-import { PublicTaskSchema, TaskSubmission, TaskSubmissionConfirmation } from "./types";
+import { PublicTaskSchema, TaskSchema, TaskSubmission, TaskSubmissionConfirmation } from "./types";
 import assert from "assert";
 
-export async function viewAllPublicTasks(gameId: ObjectId) {
+// Returns public information about all tasks
+export async function viewAllPublicTasks(rawGameId: string): Promise<PublicTaskSchema[]> {
+    const gameId = new ObjectId(rawGameId);
     const game = await getGameColl().findOne({ _id: gameId });
+    assert(game, "Invalid game ID");
 
     const publicTasks: PublicTaskSchema[] = [];
     for(const task of game!.tasks) {
@@ -26,16 +29,23 @@ export async function viewAllPublicTasks(gameId: ObjectId) {
     return publicTasks;
 }
 
-export async function viewAllTasks(token: string, gameId: ObjectId) {
+// Returns information about all tasks; only a host or admin can see
+export async function viewAllTasks(token: string, rawGameId: string): Promise<TaskSchema[]> {
+    const gameId = new ObjectId(rawGameId);
     verifyToken(token, gameId, ["host", "admin"]);
 
     const game = await getGameColl().findOne({ _id: gameId });
-    return game!.tasks;
+    assert(game, "Invalid game ID");
+    return game.tasks;
 }
 
-export async function viewPublicTask(gameId: ObjectId, taskId: ObjectId) {
+// Returns public information about a task
+export async function viewPublicTask(rawGameId: string, rawTaskId: string): Promise<PublicTaskSchema> {
+    const gameId = new ObjectId(rawGameId);
     const game = await getGameColl().findOne({ _id: gameId });
-    const task = game!.tasks.find(t => t._id.toString() == taskId.toString());
+    assert(game, "Invalid game ID");
+
+    const task = game.tasks.find(t => t._id.toString() == rawTaskId);
     assert(task != undefined, "Invalid task ID");
 
     const publicTask: PublicTaskSchema = {
@@ -52,24 +62,31 @@ export async function viewPublicTask(gameId: ObjectId, taskId: ObjectId) {
     return publicTask;
 }
 
-export async function viewTask(token: string, gameId: ObjectId, taskId: ObjectId) {
+// Returns information about a task; only a host or admin can see
+export async function viewTask(token: string, rawGameId: string, rawTaskId: string): Promise<TaskSchema> {
+    const gameId = new ObjectId(rawGameId);
     verifyToken(token, gameId, ["host", "admin"]);
 
     const game = await getGameColl().findOne({ _id: gameId });
-    const task = game!.tasks.find(t => t._id.toString() == taskId.toString());
+    assert(game, "Invalid game ID");
+
+    const task = game.tasks.find(t => t._id.toString() == rawTaskId);
     assert(task != undefined, "Invalid task ID");
     return task;
 }
 
-export async function submitTask(token: string, gameId: ObjectId, taskId: ObjectId, answers: string[]) {
+export async function submitTask(token: string, rawGameId: string, rawTaskId: string, answers: string[]): Promise<TaskSubmissionConfirmation> {
+    const gameId = new ObjectId(rawGameId);
+    const taskId = new ObjectId(rawTaskId);
     const decodedToken = verifyToken(token, gameId, ["player"]);
 
     // Retrieve the game from the database
     const game = await getGameColl().findOne({ _id: gameId });
-    assert(game!.state == "running", "Game is not running");
+    assert(game, "Invalid game ID");
+    assert(game.state == "running", "Game is not running");
 
     // Verify the task exists in the game
-    const task = game!.tasks.find(t => t._id.toString() == taskId.toString());
+    const task = game.tasks.find(t => t._id.toString() == rawTaskId);
     assert(task != undefined, "Invalid task ID");
 
     // Retrieve the player from the database
@@ -122,5 +139,5 @@ export async function submitTask(token: string, gameId: ObjectId, taskId: Object
     return {
         submissionTime: submission.submissionTime,
         success: submission.success
-    } as TaskSubmissionConfirmation;
+    };
 }

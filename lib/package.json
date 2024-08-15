@@ -1,12 +1,12 @@
 {
-  "name": "@cloudydaiyz/game-engine-lib",
-  "version": "1.3.0",
-  "description": "Game engine backend library",
+  "name": "@cloudydaiyz/vulture-lib",
+  "version": "1.3.1",
+  "description": "Backend library for Vulture project",
   "main": "dist/index.js",
   "types": "dist/index.d.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cloudydaiyz/the-great-hunt.git",
+    "url": "git+https://github.com/cloudydaiyz/vulture.git",
     "directory": "lib"
   },
   "files": [
@@ -14,14 +14,16 @@
   ],
   "keywords": [
     "game",
-    "engine"
+    "engine",
+    "vulture",
+    "mongodb"
   ],
   "author": "Kylan Duncan <kyland03.biz@gmail.com> (https://cloudydaiyz.com)",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/cloudydaiyz/the-great-hunt/issues"
+    "url": "https://github.com/cloudydaiyz/vulture/issues"
   },
-  "homepage": "https://github.com/cloudydaiyz/the-great-hunt#readme",
+  "homepage": "https://github.com/cloudydaiyz/vulture#readme",
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/jsonwebtoken": "^9.0.6",

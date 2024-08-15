@@ -6,14 +6,18 @@ import { verifyToken } from "./auth";
 import { PublicPlayerSchema } from "./types";
 import { ObjectId } from "mongodb";
 
-export async function viewAllPlayers(token: string, gameId: ObjectId) {
+// Returns information about all players from the specified game
+export async function viewAllPlayers(token: string, rawGameId: string) {
+    const gameId = new ObjectId(rawGameId);
     verifyToken(token, gameId, ["host", "admin"]);
 
     const players = getPlayerColl().find({ gameId: gameId });
     return players.toArray();
 }
 
-export async function viewAllPublicPlayers(gameId: ObjectId) {
+// Returns public information about all players from the specified game
+export async function viewAllPublicPlayers(rawGameId: string) {
+    const gameId = new ObjectId(rawGameId);
     const players = getPlayerColl().find({ gameId: gameId });
     const publicPlayers: PublicPlayerSchema[] = [];
 
@@ -32,22 +36,23 @@ export async function viewAllPublicPlayers(gameId: ObjectId) {
     return publicPlayers;
 }
 
-export async function viewPlayer(token: string, gameId: ObjectId, username: string) {
+// Returns information about a player; only host, admin, and the player themself should have this info
+export async function viewPlayer(token: string, rawGameId: string, username: string) {
+    const gameId = new ObjectId(rawGameId);
     const decodedToken = verifyToken(token, gameId);
-
-    // No one other than a host, admin, or the player themself must be able to access
-    // info about a player
     assert(decodedToken.role != "player" || username == decodedToken.username, "Invalid access role");
 
     const player = getPlayerColl().findOne({ username: username, gameId: gameId });
-    assert(player != null, "Player does not exist");
+    assert(player, "Player does not exist");
     
     return player;
 }
 
-export async function viewPublicPlayer(gameId: ObjectId, username: string) {
+// Returns public information about a player
+export async function viewPublicPlayer(rawGameId: string, username: string) {
+    const gameId = new ObjectId(rawGameId);
     const player = await getPlayerColl().findOne({ username: username, gameId: gameId });
-    assert(player != null, "Player does not exist");
+    assert(player, "Player does not exist");
 
     const publicPlayer: PublicPlayerSchema = {
         gameId: gameId,
