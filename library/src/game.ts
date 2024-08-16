@@ -44,6 +44,7 @@ function upgradeCredentials(token: UserToken, gameId: ObjectId, role: UserRole):
 export async function createGame(token: string, settings: GameSettings, tasks: TaskSchema[]): Promise<CreateGameConfirmation> {
     const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
     tasks.forEach(t => t._id = new ObjectId());
+    const taskids = tasks.map(t => t._id.toString());
 
     const res = await getGameColl().insertOne({
         tasks: tasks,
@@ -56,7 +57,7 @@ export async function createGame(token: string, settings: GameSettings, tasks: T
     assert(res.acknowledged && res.insertedId != null, "Create operation unsuccessful");
 
     const creds = upgradeCredentials(decodedToken, res.insertedId, "host");
-    return { creds: creds, gameid: res.insertedId.toString() } as CreateGameConfirmation;
+    return { creds: creds, gameid: res.insertedId.toString(), taskids: taskids } as CreateGameConfirmation;
 }
 
 // Joins a game with the given game ID, role, and admin code
@@ -72,7 +73,9 @@ export async function joinGame(token: string, rawGameId: string, role: PlayerRol
     const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
     const game = await getGameColl().findOne({ _id: gameId });
     assert(game, "Invalid game ID");
-    assert(decodedToken.username != game.host || !game.players.includes(decodedToken.username), 
+    assert(decodedToken.username != game.host 
+        && !game.players.includes(decodedToken.username) 
+        && !game.admins.includes(decodedToken.username), 
         "User already in game");
 
     // Decide whether to update the game's players or admins with based on the specified role
@@ -99,6 +102,7 @@ export async function joinGame(token: string, rawGameId: string, role: PlayerRol
         }
     }
     update.$addToSet = toAdd;
+    console.log(update)
 
     // Update the game's players (and admins if the new player is an admin)
     const gameRes = await getGameColl().updateOne({ _id: gameId }, update);

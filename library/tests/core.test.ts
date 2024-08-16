@@ -153,6 +153,8 @@ describe("game management", () => {
         const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
         expect(game).toHaveProperty("creds.accessToken");
         expect(game).toHaveProperty("creds.refreshToken");
+        expect(game).toHaveProperty("gameid");
+        expect(game).toHaveProperty("taskids");
     });
 
     test("joinGame", async () => {
@@ -163,7 +165,17 @@ describe("game management", () => {
         const result = await joinGame(users[1].creds.accessToken, gameId, "player");
         expect(result).toHaveProperty("accessToken");
         expect(result).toHaveProperty("refreshToken");
+        console.log(result);
         users[1].creds = result;
+    });
+
+    test("host can't join game", async () => {
+        const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
+        gameId = game.gameid;
+        users[0].creds = game.creds;
+
+        // const result = await joinGame(users[0].creds.accessToken, gameId, "player");
+        expect(joinGame(users[0].creds.accessToken, gameId, "player")).rejects.toThrow();
     });
 
     test("getGame", async () => {
@@ -187,6 +199,7 @@ describe("game management", () => {
     });
 
     test("startGame", async () => {
+        console.log(await getPublicGame(gameId));
         await startGame(users[0].creds.accessToken, gameId);
         const game = await getPublicGame(gameId);
         expect(game.state).toBe("running");

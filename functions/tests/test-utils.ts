@@ -1,6 +1,5 @@
 import { jest } from "@jest/globals";
 import { APIGatewayProxyEventQueryStringParameters, APIGatewayProxyEventV2 } from "aws-lambda";
-import "dotenv/config";
 
 export const exampleContext = {
         callbackWaitsForEmptyEventLoop: false,

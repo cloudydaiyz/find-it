@@ -1,13 +1,13 @@
+import "dotenv/config";
 import { describe, expect, afterAll, it, jest } from "@jest/globals";
 import { APIGatewayProxyStructuredResultV2 } from "aws-lambda";
 import * as auth from "../src/auth";
 
-// Make sure to mock BEFORE importing the functions
-jest.mock("@cloudydaiyz/game-engine-lib");
+jest.mock("@cloudydaiyz/vulture-lib");
 jest.mock("mongodb");
 
-import { login, signup } from "@cloudydaiyz/game-engine-lib";
-import { createEvent, exampleCallback, exampleContext } from "./testutils";
+import { login, signup } from "@cloudydaiyz/vulture-lib";
+import { createEvent, exampleCallback, exampleContext } from "./test-utils";
 
 afterAll(async () => { 
     jest.restoreAllMocks();

@@ -1,11 +1,12 @@
-import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings } from "@cloudydaiyz/game-engine-lib";
+import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings } from "@cloudydaiyz/vulture-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
-import { MongoClient, ObjectId } from "mongodb";
 import { z } from "zod";
 import assert from "assert";
 
-const c = setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
+assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
+
+const c = setClient(process.env["MONGODB_CONNECTION_STRING"]);
 
 // Type checking GameSettings, will be moved into lib soon
 const gameSettingsParser = z.object({
@@ -67,10 +68,10 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
         } else if(specificGamePathTest) {
             if(method == "GET") {
                 if(publicVisibility) {
-                    result = await getPublicGame(new ObjectId(specificGamePathTest.gameid as string));
+                    result = await getPublicGame(specificGamePathTest.gameid);
                 } else {
                     assert(event.headers.token != undefined, "Must have a token for this operation");
-                    result = await getGame(event.headers.token, new ObjectId(specificGamePathTest.gameid as string));
+                    result = await getGame(event.headers.token, specificGamePathTest.gameid);
                 }
             } else if(method == "POST") {
                 assert(event.body, "Must have an event body for this operation");
@@ -79,11 +80,11 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
                 const body = JSON.parse(event.body);
                 
                 if(body.action == "start") {
-                    result = await startGame(event.headers.token, new ObjectId(specificGamePathTest.gameid as string));
+                    result = await startGame(event.headers.token, specificGamePathTest.gameid);
                 } else if(body.action == "stop") {
-                    result = await stopGame(event.headers.token, new ObjectId(specificGamePathTest.gameid as string));
+                    result = await stopGame(event.headers.token, specificGamePathTest.gameid);
                 } else if(body.action == "restart") {
-                    result = await restartGame(event.headers.token, new ObjectId(specificGamePathTest.gameid as string));
+                    result = await restartGame(event.headers.token, specificGamePathTest.gameid as string);
                 } else {
                     throw new Error("Invalid action");
                 }

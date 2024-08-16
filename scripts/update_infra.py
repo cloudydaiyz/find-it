@@ -56,7 +56,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("--plan", action="store_true", help="Include if you only want a plan of the TF configuration")
     parser.add_argument("--output", action="store_true", help="Include if you only want the output of the current TF configuration")
-    parser.add_argument("--no-prod", action="store_true", help="Include if you don't want to run `npm run prod`")
+    parser.add_argument("--no-prod", action="store_true", help="Include if you don't want to run `npm run prod` in the /functions directory")
     parser.add_argument("--destroy", action="store_true", help="Include if you want to destroy the current TF configuration")
     args = vars(parser.parse_args())
 

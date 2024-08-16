@@ -1,12 +1,13 @@
+import "dotenv/config";
 import { describe, expect, afterAll, it, jest } from "@jest/globals";
 import { APIGatewayProxyStructuredResultV2 } from "aws-lambda";
 import * as tasks from "../src/tasks";
 
-jest.mock("@cloudydaiyz/game-engine-lib");
+jest.mock("@cloudydaiyz/vulture-lib");
 jest.mock("mongodb");
 
-import { TaskSubmissionConfirmation } from "@cloudydaiyz/game-engine-lib";
-import { viewAllTasks, viewAllPublicTasks, viewTask, viewPublicTask, submitTask } from "@cloudydaiyz/game-engine-lib";
+// import { TaskSubmissionConfirmation } from "@cloudydaiyz/vulture-lib";
+import { viewAllTasks, viewAllPublicTasks, viewTask, viewPublicTask, submitTask } from "@cloudydaiyz/vulture-lib";
 import { createEvent, exampleCallback, exampleContext } from "./test-utils";
 
 afterAll(async () => { 

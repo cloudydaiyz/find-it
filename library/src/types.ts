@@ -117,7 +117,8 @@ export interface AccessCredentials {
 // Confirmation that a game was created
 export type CreateGameConfirmation = {
     creds: AccessCredentials,
-    gameid: string
+    gameid: string,
+    taskids: string[]
 };
 
 // Updated information about a game

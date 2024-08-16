@@ -1,14 +1,14 @@
-import { setClient, login, signup, getClient } from "@cloudydaiyz/game-engine-lib";
+import { setClient, login, signup, getClient } from "@cloudydaiyz/vulture-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
-import { MongoClient } from "mongodb";
+
+assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
 
 const registerPath = Path.createPath('/register');
 const loginPath = Path.createPath('/login');
 
-console.log(process.env["MONGODB_CONNECTION_STRING"]);
-const c = setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
+const c = setClient(process.env["MONGODB_CONNECTION_STRING"]);
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
     await c;

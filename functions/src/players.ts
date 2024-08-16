@@ -1,9 +1,10 @@
-import { setClient, joinGame, leaveGame, viewAllPlayers, viewAllPublicPlayers, viewPlayer, viewPublicPlayer } from "@cloudydaiyz/game-engine-lib";
+import { setClient, joinGame, leaveGame, viewAllPlayers, viewAllPublicPlayers, viewPlayer, viewPublicPlayer } from "@cloudydaiyz/vulture-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
-import { MongoClient, ObjectId } from "mongodb";
 import { z } from "zod";
+
+assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
 
 const playersPath = Path.createPath('/game/:gameid/players');
 const playerPath = Path.createPath('/game/:gameid/players/:username');
@@ -13,7 +14,7 @@ const joinGameBodyParser = z.object({
     code: z.string().optional()
 });
 
-const c = setClient(new MongoClient(process.env["MONGODB_CONNECTION_STRING"]!));
+const c = setClient(process.env["MONGODB_CONNECTION_STRING"]);
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
     await c;
@@ -30,14 +31,14 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
         if(playersPathTest) {
             if(method == "GET") {
                 if(publicVisibility) {
-                    result = await viewAllPublicPlayers(new ObjectId(playersPathTest.gameid as string));
+                    result = await viewAllPublicPlayers(playersPathTest.gameid);
                 } else {
                     assert(event.headers.token != undefined, "Must have a token for this operation");
-                    result = await viewAllPlayers(event.headers.token, new ObjectId(playersPathTest.gameid as string));
+                    result = await viewAllPlayers(event.headers.token, playersPathTest.gameid);
                 }
             } else if(method == "DELETE") {
                 assert(event.headers.token != undefined, "Must have a token for this operation");
-                await leaveGame(event.headers.token, new ObjectId(playersPathTest.gameid as string));
+                await leaveGame(event.headers.token, playersPathTest.gameid);
                 result = { message: "Left game successfully" };
             } else if(method == "POST") {
                 assert(event.body, "Must have an event body for this operation");
@@ -45,7 +46,7 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
 
                 const body = JSON.parse(event.body);
                 assert(joinGameBodyParser.safeParse(body).success, "Invalid body");
-                result = await joinGame(event.headers.token, new ObjectId(playersPathTest.gameid as string), body.role, body.code);
+                result = await joinGame(event.headers.token, playersPathTest.gameid, body.role, body.code);
             } else {
                 throw new Error("Invalid request method");
             }
@@ -56,7 +57,7 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
                 } else {
                     assert(event.headers.token != undefined, "Must have a token for this operation");
                     
-                    const player = await viewPlayer(event.headers.token, new ObjectId(playerPathTest.gameid as string), playerPathTest.username);
+                    const player = await viewPlayer(event.headers.token, playerPathTest.gameid, playerPathTest.username);
                     if(!player) throw new Error("Unable to find player");
                     
                     result = player;

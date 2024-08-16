@@ -54,46 +54,22 @@ def new_game(auth_url, game_url):
                         json={"settings": settings, "tasks": tasks}, 
                         headers={"token": creds['accessToken']})
     assert res.status_code == 200
-
     res_json = res.json()
+
     host_creds = res_json['creds']
     game_id = res_json['gameid']
     return (host_creds, game_id)
 
 @pytest.fixture
-def new_game_with_player(auth_url, game_url, players_url):
-    print("players test")
+def new_game_with_player(new_game, auth_url, players_url):
+    (host_creds, game_id) = new_game
 
-    host_login = requests.post(auth_url + "/login", json={"username": "kylan", "password": "duncan"})
-    assert host_login.status_code == 200
-    player_creds = host_login.json()
-
-    # should create a game
-    settings = {
-        "name": "test game",
-        "duration": 0,
-        "startTime": 0,
-        "endTime": 0,
-        "ordered": False,
-        "minPlayers": 0,
-        "maxPlayers": 0,
-        "joinMidGame": False,
-        "numRequiredTasks": 0
-    }
-    tasks = []
-    res = requests.post(game_url + "/game", 
-                        json={"settings": settings, "tasks": tasks}, 
-                        headers={"token": player_creds['accessToken']})
-    assert res.status_code == 200
-    res_json = res.json()
-    host_creds = res_json['creds']
-    game_id = res_json['gameid']
-
-    # join the new game
+    # login
     player_login = requests.post(auth_url + "/login", json={"username": "another", "password": "person"})
     assert player_login.status_code == 200
     creds = player_login.json()
 
+    # join the new game
     res = requests.post(f"{players_url}/game/{game_id}/players", 
                         json={"role": "player"}, 
                         headers={"token": creds['accessToken']})

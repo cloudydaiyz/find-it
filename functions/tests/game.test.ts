@@ -1,12 +1,13 @@
+import "dotenv/config";
 import { describe, expect, afterAll, it, jest } from "@jest/globals";
 import { APIGatewayProxyStructuredResultV2 } from "aws-lambda";
 import * as game from "../src/game";
 
-jest.mock("@cloudydaiyz/game-engine-lib");
+jest.mock("@cloudydaiyz/vulture-lib");
 jest.mock("mongodb");
 
-import { createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings } from "@cloudydaiyz/game-engine-lib";
-import { createEvent, exampleCallback, exampleContext } from "./testutils";
+import { createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings } from "@cloudydaiyz/vulture-lib";
+import { createEvent, exampleCallback, exampleContext } from "./test-utils";
 
 afterAll(async () => { 
     jest.restoreAllMocks();
