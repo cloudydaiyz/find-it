@@ -8,4 +8,4 @@ Make sure you have at least `npm` v20.x installed.
 - Preparing package to be deployed to AWS: `npm run prod`
 
 ## Scripts
-- `rename-js-to-mjs.js` - Renames `.js` files to `.mjs` in the `/handlers` folder. Called by `npm run build` to ensure the produced files can run properly in AWS.
+- `rename-js-to-mjs.js` - Renames `.js` files to `.mjs` in the `/handlers` folder. Called by `npm run build` to ensure the produced files can run properly in AWS
