@@ -7,7 +7,7 @@ export interface UserSchema {
     password: string;
 }
 
-// JWT
+// JWT payload for authentication
 export interface UserToken extends JwtPayload {
     userid: ObjectId;
     username: string;
@@ -59,20 +59,36 @@ export interface PublicGameSchema {
     players: string[];
 };
 
-// All the information about a game task
+/**
+ * All the information about a game task
+ * - `answers`: the indicies of the correct answers for this task in `answerChoices`, 
+ *   accepts any answer if empty
+ * - `attempts`: amount of attempts allowed for this task, 0 for infinite
+ * - `scalePoints`: scale points based on time remaining, automatically false if 
+ *   duration is infinite
+ */
 export interface TaskSchema {
     _id: ObjectId;
     type: TaskType;
     question: string;
     clue: string;
-    answerChoices: string[];
-    answers: number[]; // the index of the correct answers for this task, empty = accepts any answer
-
-    attempts: number; // 0 for infinite
     required: boolean;
     points: number;
-    scalePoints: boolean; // scale points based on time, automatically false if duration is infinite
+    answerChoices: string[];
+    
+    answers: number[];
+    attempts: number;
+    scalePoints: boolean;
 };
+
+// All the information about a player's task submission
+export interface TaskSubmission {
+    _id: ObjectId;
+    taskid: ObjectId;
+    answers: string[];
+    submissionTime: number;
+    success: boolean;
+}
 
 // Allowed types for tasks
 export type TaskType = "multiple choice" | "text";
@@ -97,15 +113,6 @@ export interface PublicPlayerSchema {
     numTasksSubmitted: number;
     numTasksCompleted: number;
     done: boolean;
-}
-
-// All the information about a player's task submission
-export interface TaskSubmission {
-    _id: ObjectId;
-    taskid: ObjectId;
-    answers: string[];
-    submissionTime: number;
-    success: boolean;
 }
 
 // Credentials to access resources as a user

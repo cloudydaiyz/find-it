@@ -3,9 +3,10 @@
 import jwt from "jsonwebtoken";
 import { AccessCredentials, CreateGameConfirmation, GameSchema, GameSettings, PlayerRole, PublicGameSchema, TaskSchema, UpdateGameStateConfirmation, UserRole, UserToken } from "./types";
 import { ObjectId, SetFields, UpdateFilter, WithId } from "mongodb";
-import { getGameColl, getPlayerColl, getAdminCodes } from "./core";
+import { getGameColl, getPlayerColl, getAdminCodes, getClient } from "./core";
 import { verifyToken } from "./auth";
 import assert from "assert";
+import { MAX_ADMINS, MAX_GAMES } from "./constants";
 
 /**
  * Upgrades user credentials to game-based credentials
@@ -42,6 +43,9 @@ function upgradeCredentials(token: UserToken, gameId: ObjectId, role: UserRole):
 
 // Creates a new game with the user specified in the token, the specified game settings and tasks
 export async function createGame(token: string, settings: GameSettings, tasks: TaskSchema[]): Promise<CreateGameConfirmation> {
+    const games = await getGameColl().find().toArray();
+    assert(games.length < MAX_GAMES, "Max games reached");
+
     const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
     tasks.forEach(t => t._id = new ObjectId());
     const taskids = tasks.map(t => t._id.toString());
@@ -77,36 +81,42 @@ export async function joinGame(token: string, rawGameId: string, role: PlayerRol
         && !game.players.includes(decodedToken.username) 
         && !game.admins.includes(decodedToken.username), 
         "User already in game");
+    assert(role != "player" || game.players.length < game.settings.maxPlayers, "Maximum player capacity reached for this game");
+    assert(role != "admin" || game.admins.length < MAX_ADMINS, "Maximum admin capacity reached for this game");
 
-    // Decide whether to update the game's players or admins with based on the specified role
-    const update: UpdateFilter<GameSchema> = {};
-    let toAdd: SetFields<GameSchema>;
-    if(role == "admin") {
-        toAdd = { "admins": decodedToken.username };
-    } else {
-        toAdd = { "players": decodedToken.username };
+    // Start a MongoDB client session to begin a transaction
+    const session = getClient().startSession();
+    await session.withTransaction(async () => {
 
-        // Insert a new player
-        const playerRes = await getPlayerColl().insertOne({
-            gameId: gameId,
-            username: decodedToken.username,
-            points: 0,
-            tasksSubmitted: [],
-            done: game.settings.numRequiredTasks == 0 ? true : false
-        });
-        assert(playerRes.acknowledged && playerRes.insertedId != null, "Create operation unsuccessful");
+        // Decide whether to update the game's players or admins with based on the specified role
+        const update: UpdateFilter<GameSchema> = {};
+        let toAdd: SetFields<GameSchema>;
+        if(role == "admin") {
+            toAdd = { "admins": decodedToken.username };
+        } else {
+            toAdd = { "players": decodedToken.username };
 
-        // If there's enough players after this operation, update the game's state
-        if(game.state == "not ready" && game.players.length == game.settings.minPlayers - 1) {
-            update.$set = { "state": "ready" };
+            // Insert a new player
+            const playerRes = await getPlayerColl().insertOne({
+                gameId: gameId,
+                username: decodedToken.username,
+                points: 0,
+                tasksSubmitted: [],
+                done: game.settings.numRequiredTasks == 0 ? true : false
+            });
+            assert(playerRes.acknowledged && playerRes.insertedId != null, "Create operation unsuccessful");
+
+            // If there's enough players after this operation, update the game's state
+            if(game.state == "not ready" && game.players.length == game.settings.minPlayers - 1) {
+                update.$set = { "state": "ready" };
+            }
         }
-    }
-    update.$addToSet = toAdd;
-    console.log(update)
+        update.$addToSet = toAdd;
 
-    // Update the game's players (and admins if the new player is an admin)
-    const gameRes = await getGameColl().updateOne({ _id: gameId }, update);
-    assert(gameRes.acknowledged && gameRes.modifiedCount == 1, "Operation unsuccessful");
+        // Update the game's players (and admins if the new player is an admin)
+        const gameRes = await getGameColl().updateOne({ _id: gameId }, update);
+        assert(gameRes.acknowledged && gameRes.modifiedCount == 1, "Operation unsuccessful");
+    }).then(() => session.endSession());
 
     return upgradeCredentials(decodedToken, gameId, role);
 }
@@ -162,9 +172,8 @@ export async function leaveGame(token: string, rawGameId: string): Promise<void>
     const gameId = new ObjectId(rawGameId);
     const decodedToken = verifyToken(token, gameId, ["player", "admin"]);
 
-    const result = await getGameColl().updateOne({ _id: gameId }, { $pull: {
-        players: decodedToken.username
-    } });
+    const result = await getGameColl().updateOne({ _id: gameId }, 
+        { $pull: { players: decodedToken.username } });
     assert(result.acknowledged && result.modifiedCount == 1, "No player removed");
 }
 

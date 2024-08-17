@@ -6,7 +6,7 @@ import * as auth from "../src/auth";
 jest.mock("@cloudydaiyz/vulture-lib");
 jest.mock("mongodb");
 
-import { login, signup } from "@cloudydaiyz/vulture-lib";
+import { login, signup, refresh } from "@cloudydaiyz/vulture-lib";
 import { createEvent, exampleCallback, exampleContext } from "./test-utils";
 
 afterAll(async () => { 
@@ -14,7 +14,7 @@ afterAll(async () => {
 });
 
 describe("auth handler tests", () => {
-    it("should register a user successfully", async () => {
+    it("should register a user", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
             "/register",
@@ -27,7 +27,7 @@ describe("auth handler tests", () => {
         expect(signup).toHaveBeenCalledWith("testuser", "testpass");
     });
 
-    it("should login a user successfully", async () => {
+    it("should login a user", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
             "/login",
@@ -38,6 +38,19 @@ describe("auth handler tests", () => {
         const result = await auth.handler(event, exampleContext, exampleCallback) as APIGatewayProxyStructuredResultV2;
         expect(result.statusCode).toBe(200);
         expect(login).toHaveBeenCalledWith("testuser", "testpass");
+    });
+
+    it("should refresh a token", async () => {
+        const event = createEvent(
+            { "Content-Type": "application/json" },
+            "/refresh",
+            "POST",
+            { refreshToken: "testtoken" }
+        );
+
+        const result = await auth.handler(event, exampleContext, exampleCallback) as APIGatewayProxyStructuredResultV2;
+        expect(result.statusCode).toBe(200);
+        expect(refresh).toHaveBeenCalledWith("testtoken");
     });
 
     it("should return error for missing body", async () => {

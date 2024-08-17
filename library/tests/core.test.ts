@@ -64,7 +64,6 @@ interface UserCreds {
 const users: UserCreds[] = [];
 
 /* TESTS */
-
 describe("utilities", () => {
     test("environment variables", () => {
         for(const envVar of envVars) {
@@ -157,7 +156,7 @@ describe("game management", () => {
         expect(game).toHaveProperty("taskids");
     });
 
-    test("joinGame", async () => {
+    test("joinGame: player can join game", async () => {
         const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
         gameId = game.gameid;
         users[0].creds = game.creds;
@@ -165,16 +164,10 @@ describe("game management", () => {
         const result = await joinGame(users[1].creds.accessToken, gameId, "player");
         expect(result).toHaveProperty("accessToken");
         expect(result).toHaveProperty("refreshToken");
-        console.log(result);
         users[1].creds = result;
     });
 
-    test("host can't join game", async () => {
-        const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
-        gameId = game.gameid;
-        users[0].creds = game.creds;
-
-        // const result = await joinGame(users[0].creds.accessToken, gameId, "player");
+    test("joinGame: host can't join game", async () => {
         expect(joinGame(users[0].creds.accessToken, gameId, "player")).rejects.toThrow();
     });
 
@@ -199,7 +192,6 @@ describe("game management", () => {
     });
 
     test("startGame", async () => {
-        console.log(await getPublicGame(gameId));
         await startGame(users[0].creds.accessToken, gameId);
         const game = await getPublicGame(gameId);
         expect(game.state).toBe("running");
@@ -322,8 +314,14 @@ describe("player management and task submission", () => {
         expect(players[0]).not.toHaveProperty("tasksSubmitted");
     });
 
-    test("viewPlayer", async () => {
+    test("viewPlayer: player can view themselves", async () => {
         const player = await viewPlayer(users[1].creds.accessToken, gameId, users[1].username);
+        expect(player).toBeDefined();
+        expect(player!.username).toBe(users[1].username);
+    });
+
+    test("viewPlayer: host can view player", async () => {
+        const player = await viewPlayer(users[0].creds.accessToken, gameId, users[1].username);
         expect(player).toBeDefined();
         expect(player!.username).toBe(users[1].username);
     });
@@ -348,7 +346,6 @@ describe("player management and task submission", () => {
 
         await submitTask(users[1].creds.accessToken, gameId, taskId2, ["Paris"]);
         player = await viewPlayer(users[1].creds.accessToken, gameId, users[1].username);
-        console.log(player);
         expect(player!.done).toBe(true);
     });
 })

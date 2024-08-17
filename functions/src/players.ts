@@ -6,8 +6,8 @@ import { z } from "zod";
 
 assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
 
-const playersPath = Path.createPath('/game/:gameid/players');
-const playerPath = Path.createPath('/game/:gameid/players/:username');
+const playersPath = Path.createPath('/games/:gameid/players');
+const playerPath = Path.createPath('/games/:gameid/players/:username');
 
 const joinGameBodyParser = z.object({
     role: z.enum(["player", "admin"]),

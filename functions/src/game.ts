@@ -5,39 +5,59 @@ import { z } from "zod";
 import assert from "assert";
 
 assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
-
 const c = setClient(process.env["MONGODB_CONNECTION_STRING"]);
+
+// Constants
+const MAX_TASKS = 20;
+const MAX_PLAYERS = 100;
 
 // Type checking GameSettings, will be moved into lib soon
 const gameSettingsParser = z.object({
     name: z.string(),
-    duration: z.number(),
-    startTime: z.number(),
-    endTime: z.number(),
+    duration: z.number().nonnegative(),
+    startTime: z.number().nonnegative(),
+    endTime: z.number().nonnegative(),
     ordered: z.boolean(),
-    minPlayers: z.number(),
-    maxPlayers: z.number(),
+    minPlayers: z.number().nonnegative().max(MAX_PLAYERS),
+    maxPlayers: z.number().min(1).max(MAX_PLAYERS),
     joinMidGame: z.boolean(),
-    numRequiredTasks: z.number(),
+    numRequiredTasks: z.number().nonnegative().max(MAX_TASKS),
 });
 
-// Type checking TaskSchema, will be moved into lib soon
+/**
+ * Type checking TaskSchema, will be moved into lib soon
+ * 
+ * taskSchemaParser constraints:
+ * - Each item in `answers` must be unique and less than the # of answer choices
+ * - `answers` length must be less than `answerChoices` length
+ */
 const taskSchemaParser = z.object({
-    // _id: ObjectId, Unneeded since createGame already generates an ID
     type: z.literal("multiple choice").or(z.literal("text")),
     question: z.string(),
     clue: z.string(),
     answerChoices: z.string().array(),
-    answers: z.number().array(),
+    answers: z.number().nonnegative().array(), 
 
-    attempts: z.number(),
+    attempts: z.number().nonnegative().min(1),
     required: z.boolean(),
     points: z.number(),
     scalePoints: z.boolean()
-}).array();
+}).refine(obj => obj.answers.length < obj.answerChoices.length 
+    && obj.answers.sort() // this might be expensive, but it speeds up validating uniqueness
+    && obj.answers.every((val, i, arr) => val < obj.answerChoices.length && (i == arr.length - 1 || val != arr[i + 1]))
+).array().max(MAX_TASKS);
 
-const gamePath = Path.createPath('/game');
-const specificGamePath = Path.createPath('/game/:gameid');
+/**
+ * createGame constraints:
+ * - scalePoints must be false if the game has an indefinite duration
+ */
+const createGameParser = z.object({
+    settings: gameSettingsParser,
+    tasks: taskSchemaParser
+}).refine(obj => obj.tasks.every(t => obj.settings.duration != 0 || !t.scalePoints));
+
+const gamesPath = Path.createPath('/games');
+const specificGamePath = Path.createPath('/games/:gameid');
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
     await c;
@@ -48,7 +68,7 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
     let result = {};
 
     try {
-        const gamePathTest = gamePath.test(path);
+        const gamePathTest = gamesPath.test(path);
         const specificGamePathTest = specificGamePath.test(path);
 
         if(gamePathTest) {
@@ -59,8 +79,7 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
                 assert(event.headers.token != undefined, "Must have a token for this operation");
 
                 const body = JSON.parse(event.body);
-                assert(gameSettingsParser.safeParse(body.settings).success, "Invalid game settings");
-                assert(taskSchemaParser.safeParse(body.tasks).success, "Invalid tasks");
+                assert(createGameParser.safeParse(body).success, "Invalid body");
                 result = await createGame(event.headers.token, body.settings, body.tasks);
             } else {
                 throw new Error("Method undefined for this operation");

@@ -5,6 +5,7 @@ import { getGameColl, getUserColl } from "./core";
 import jwt from "jsonwebtoken";
 import { AccessCredentials, UserRole, UserToken } from "./types";
 import { ObjectId } from "mongodb";
+import { MAX_USERS } from "./constants";
 
 /**
  * Verifies the JWT token belongs to the specified game and has one of the specified roles
@@ -22,7 +23,9 @@ export function verifyToken(token: string, gameId?: ObjectId, requiredRoles?: Us
 
 // Creates a new user
 export async function signup(username: string, password: string) {
-    assert(await getUserColl().findOne({username: username}) == null, 'User already exists');
+    const users = await getUserColl().find().toArray();
+    assert(users.length < MAX_USERS, "Max users reached");
+    assert(users.find(u => u.username == username) == null, 'User already exists');
     
     const res = await getUserColl().insertOne({
         username: username,

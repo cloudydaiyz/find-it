@@ -18,7 +18,7 @@ describe("tasks handler tests", () => {
     it("should view all public tasks", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/tasks",
+            "/games/123456/tasks",
             "GET",
             undefined,
             { public: "true" }
@@ -33,7 +33,7 @@ describe("tasks handler tests", () => {
     it("should view all tasks for a private game", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456/tasks",
+            "/games/123456/tasks",
             "GET",
             undefined,
             { public: "false" }
@@ -48,7 +48,7 @@ describe("tasks handler tests", () => {
     it("should view a public task", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/tasks/789",
+            "/games/123456/tasks/789",
             "GET",
             undefined,
             { public: "true" }
@@ -63,7 +63,7 @@ describe("tasks handler tests", () => {
     it("should view a private task", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456/tasks/789",
+            "/games/123456/tasks/789",
             "GET",
             undefined,
             { public: "false" }
@@ -78,7 +78,7 @@ describe("tasks handler tests", () => {
     it("should submit a task", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456/tasks/789/submit",
+            "/games/123456/tasks/789/submit",
             "POST",
             { answers: ["answer1", "answer2"] }
         );
@@ -94,7 +94,7 @@ describe("tasks handler tests", () => {
     it("should return error for missing token on private tasks", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/tasks",
+            "/games/123456/tasks",
             "GET",
             undefined,
             { public: "false" }
@@ -108,7 +108,7 @@ describe("tasks handler tests", () => {
     it("should return error for missing request body on submit task", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456/tasks/789/submit",
+            "/games/123456/tasks/789/submit",
             "POST"
         );
 
@@ -132,7 +132,7 @@ describe("tasks handler tests", () => {
     it("should return error for invalid method", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/tasks",
+            "/games/123456/tasks",
             "PUT"
         );
 

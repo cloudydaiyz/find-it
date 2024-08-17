@@ -17,7 +17,7 @@ describe("game handler tests", () => {
     it("should list public games", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game",
+            "/games",
             "GET"
         );
 
@@ -41,7 +41,7 @@ describe("game handler tests", () => {
 
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game",
+            "/games",
             "POST",
             { settings: settings, tasks: [] }
         );
@@ -54,7 +54,7 @@ describe("game handler tests", () => {
     it("should get a public game", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456",
+            "/games/123456",
             "GET",
             undefined,
             { public: "true" }
@@ -70,7 +70,7 @@ describe("game handler tests", () => {
     it("should get a private game", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456",
+            "/games/123456",
             "GET",
             undefined,
             { public: "false" }
@@ -85,7 +85,7 @@ describe("game handler tests", () => {
     it("should start a game", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456",
+            "/games/123456",
             "POST",
             { action: "start" }
         );
@@ -99,7 +99,7 @@ describe("game handler tests", () => {
     it("should stop a game", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456",
+            "/games/123456",
             "POST",
             { action: "stop" }
         );
@@ -113,7 +113,7 @@ describe("game handler tests", () => {
     it("should restart a game", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456",
+            "/games/123456",
             "POST",
             { action: "restart" }
         );
@@ -127,7 +127,7 @@ describe("game handler tests", () => {
     it("should return error for missing token", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456",
+            "/games/123456",
             "POST",
             { action: "start" }
         );
@@ -152,7 +152,7 @@ describe("game handler tests", () => {
     it("should return error for undefined method", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game",
+            "/games",
             "DELETE"
         );
 

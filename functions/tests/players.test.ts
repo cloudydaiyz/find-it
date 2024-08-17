@@ -19,7 +19,7 @@ describe("players handler tests", () => {
     it("should view all public players", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/players",
+            "/games/123456/players",
             "GET",
             undefined,
             { public: "true" }
@@ -34,7 +34,7 @@ describe("players handler tests", () => {
     it("should view all players for a private game", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456/players",
+            "/games/123456/players",
             "GET",
             undefined,
             { public: "false" }
@@ -49,7 +49,7 @@ describe("players handler tests", () => {
     it("should join a game", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456/players",
+            "/games/123456/players",
             "POST",
             { role: "player" }
         );
@@ -63,7 +63,7 @@ describe("players handler tests", () => {
     it("should leave a game", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456/players",
+            "/games/123456/players",
             "DELETE"
         );
 
@@ -76,7 +76,7 @@ describe("players handler tests", () => {
     it("should view a public player", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/players/testuser",
+            "/games/123456/players/testuser",
             "GET",
             undefined,
             { public: "true" }
@@ -91,7 +91,7 @@ describe("players handler tests", () => {
     it("should view a private player", async () => {
         const event = createEvent(
             { "Content-Type": "application/json", "token": "dummy-token" },
-            "/game/123456/players/testuser",
+            "/games/123456/players/testuser",
             "GET",
             undefined,
             { public: "false" }
@@ -108,7 +108,7 @@ describe("players handler tests", () => {
     it("should return error for missing token", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/players",
+            "/games/123456/players",
             "GET",
             undefined,
             { public: "false" }
@@ -134,7 +134,7 @@ describe("players handler tests", () => {
     it("should return error for invalid method", async () => {
         const event = createEvent(
             { "Content-Type": "application/json" },
-            "/game/123456/players",
+            "/games/123456/players",
             "PUT"
         );
 

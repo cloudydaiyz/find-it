@@ -6,9 +6,9 @@ import { z } from "zod";
 
 assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
 
-const tasksPath = Path.createPath('/game/:gameid/tasks');
-const taskPath = Path.createPath('/game/:gameid/tasks/:taskid');
-const submitPath = Path.createPath('/game/:gameid/tasks/:taskid/submit');
+const tasksPath = Path.createPath('/games/:gameid/tasks');
+const taskPath = Path.createPath('/games/:gameid/tasks/:taskid');
+const submitPath = Path.createPath('/games/:gameid/tasks/:taskid/submit');
 
 const answersParser = z.string().array();
 
