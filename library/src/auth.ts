@@ -1,11 +1,11 @@
 // Authentication functions
 
 import assert from "assert";
-import { getGameColl, getUserColl } from "./core";
+import { getClient, getGameColl, getPlayerColl, getUserColl } from "./core";
 import jwt from "jsonwebtoken";
-import { AccessCredentials, UserRole, UserToken } from "./types";
-import { ObjectId } from "mongodb";
-import { MAX_USERS } from "./constants";
+import { AccessCredentials, UserRole, UserSchema, UserToken } from "./types";
+import { ObjectId, WithId } from "mongodb";
+import { ACCESS_TOKEN_KEY, ADMIN_CODES, MAX_USERS, REFRESH_TOKEN_KEY } from "./constants";
 
 /**
  * Verifies the JWT token belongs to the specified game and has one of the specified roles
@@ -14,17 +14,17 @@ import { MAX_USERS } from "./constants";
  * @param requiredRoles Options for the roles the token should have
  * @returns The decoded token
  */
-export function verifyToken(token: string, gameId?: ObjectId, requiredRoles?: UserRole[]) {
+export function verifyToken(token: string, gameId?: ObjectId, requiredRoles?: UserRole[]): UserToken {
     const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
     assert(!gameId || decodedToken.gameId == gameId, "Invalid token; wrong game");
     assert(requiredRoles?.includes(decodedToken.role as UserRole) != false, "Invalid credentials");
     return decodedToken;
 }
 
-// Creates a new user
-export async function signup(username: string, password: string) {
+// Creates a new user, can bypass limit with an admin code
+export async function signup(username: string, password: string, code?: string): Promise<void> {
     const users = await getUserColl().find().toArray();
-    assert(users.length < MAX_USERS, "Max users reached");
+    assert(users.length < MAX_USERS || code && ADMIN_CODES.includes(code), "Max users reached");
     assert(users.find(u => u.username == username) == null, 'User already exists');
     
     const res = await getUserColl().insertOne({
@@ -35,7 +35,7 @@ export async function signup(username: string, password: string) {
 }
 
 // Generates an access token and refresh token
-export async function login(username: string, password: string) {
+export async function login(username: string, password: string): Promise<AccessCredentials> {
     const user = await getUserColl().findOne({
         username: username,
         password: password
@@ -49,12 +49,12 @@ export async function login(username: string, password: string) {
 
         const access_token = jwt.sign(
             creds, 
-            process.env['ACCESS_TOKEN_KEY'] as string, 
+            ACCESS_TOKEN_KEY, 
             { expiresIn: "15min" }
         );
         const refresh_token = jwt.sign(
             creds, 
-            process.env['REFRESH_TOKEN_KEY'] as string, 
+            REFRESH_TOKEN_KEY, 
             { expiresIn: "3hr" }
         );
 
@@ -68,10 +68,10 @@ export async function login(username: string, password: string) {
 }
 
 // Generates a new access token from a refresh token
-export async function refresh(token: string) {
+export async function refresh(token: string): Promise<string> {
     let accessToken: string | null = null;
 
-    await jwt.verify(token, process.env['REFRESH_TOKEN_KEY'] as string, async (err, decoded) => {
+    await jwt.verify(token, REFRESH_TOKEN_KEY, async (err, decoded) => {
         assert(!err && typeof decoded != 'string', "Invalid token");
 
         const decodedToken = decoded as UserToken;
@@ -97,4 +97,27 @@ export async function refresh(token: string) {
 
     assert(accessToken != null, "Unable to retrieve access token");
     return accessToken as string;
+}
+
+// Deletes a user, including player data their entry in any games they've joined
+export async function deleteUser(code: string, username: string): Promise<WithId<UserSchema>> {
+    assert(ADMIN_CODES.includes(code), "Invalid admin code");
+
+    const user = await getUserColl().findOne({ username: username });
+    assert(user, "User not found");
+
+    const session = await getClient().startSession();
+    await session.withTransaction(async () => {
+
+        const deleteUser = await getUserColl().deleteOne({ username: username });
+        assert(deleteUser.acknowledged && deleteUser.deletedCount == 1, "Unable to delete user");
+
+        const deletePlayers = await getPlayerColl().deleteMany({ username: username });
+        assert(deletePlayers.acknowledged);
+
+        const deleteFromGames = await getGameColl().updateMany({ players: username }, { $pull: { players: username }});
+        assert(deleteFromGames.acknowledged);
+    });
+
+    return user;
 }

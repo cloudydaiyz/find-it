@@ -1,19 +1,20 @@
+import "dotenv/config";
 import { describe, test, expect, beforeAll, afterAll, it } from "@jest/globals";
 import { MongoClient, ObjectId } from "mongodb";
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import jwt from "jsonwebtoken";
 
 import { setClient, getClient } from "../src/core"
-import { login, signup, refresh, verifyToken } from "../src/auth";
-import { createGame, joinGame, getGame, leaveGame, startGame, stopGame, restartGame, getPublicGame, listPublicGames } from "../src/game";
+import { login, signup, refresh, verifyToken, deleteUser } from "../src/auth";
+import { createGame, joinGame, getGame, leaveGame, startGame, stopGame, restartGame, getPublicGame, listPublicGames, deleteGame } from "../src/game";
 import { viewAllPublicTasks, viewAllTasks, viewPublicTask, viewTask, submitTask } from "../src/tasks";
-import { viewAllPlayers, viewPlayer, viewAllPublicPlayers, viewPublicPlayer } from "../src/players";
+import { viewAllPlayers, viewPlayer, viewAllPublicPlayers, viewPublicPlayer, deletePlayer } from "../src/players";
 
-import "dotenv/config";
 import { AccessCredentials, GameSettings, TaskSchema } from "../src/types";
+import { ACCESS_TOKEN_KEY, ADMIN_CODES } from "../src/constants";
 const envVars = [ "MONGODB_CONNECTION_STRING", "ACCESS_TOKEN_KEY", "REFRESH_TOKEN_KEY" ];
 
-let mongod: MongoMemoryServer;
+let mongod: MongoMemoryReplSet;
 let c: MongoClient;
 
 /* CONSTANTS */
@@ -38,7 +39,7 @@ const tasks: TaskSchema[] = [
         clue: "Basic math",
         answerChoices: ["3", "4", "5"],
         answers: [1],
-        attempts: 0,
+        attempts: 1,
         required: true,
         points: 10,
         scalePoints: false
@@ -50,7 +51,7 @@ const tasks: TaskSchema[] = [
         clue: "Geography",
         answerChoices: [],
         answers: [],
-        attempts: 0,
+        attempts: 1,
         required: true,
         points: 20,
         scalePoints: false
@@ -79,7 +80,7 @@ describe("utilities", () => {
 });
 
 beforeAll(async () => {
-    mongod = await MongoMemoryServer.create();
+    mongod = await MongoMemoryReplSet.create();
     await setClient(mongod.getUri());
     c = getClient();
 
@@ -122,14 +123,21 @@ describe("authentication", () => {
 
     test("verifyToken", () => {
         const gameId = new ObjectId();
-        const token = jwt.sign({ gameId: gameId, role: "player" }, process.env['ACCESS_TOKEN_KEY'] as string);
+        const token = jwt.sign({ gameId: gameId, role: "player" }, ACCESS_TOKEN_KEY);
         const decodedToken = verifyToken(token, gameId, ["player"]);
         expect(decodedToken.gameId?.toString()).toEqual(gameId.toString());
     });
 
+    test("delete user", async () => {
+        await signup("temporary", "person");
+        await expect(login("temporary", "person")).resolves.not.toThrow();
+        await expect(deleteUser(ADMIN_CODES[0], "temporary")).resolves.not.toThrow();
+        await expect(login("temporary", "person")).rejects.toThrow();
+    });
+
     test("invalid verifyToken", () => {
         const gameId = new ObjectId();
-        const token = jwt.sign({ gameId: gameId, role: "player" }, process.env['ACCESS_TOKEN_KEY'] as string);
+        const token = jwt.sign({ gameId: gameId, role: "player" }, ACCESS_TOKEN_KEY);
         expect(() => verifyToken(token, new ObjectId(), ["player"])).toThrow("Invalid token; wrong game");
     });
 
@@ -213,6 +221,12 @@ describe("game management", () => {
         const newGame = await restartGame(users[0].creds.accessToken, gameId);
         expect(newGame).toHaveProperty("creds.accessToken");
         expect(newGame).toHaveProperty("creds.refreshToken");
+    });
+
+    test("deleteGame", async() => {
+        const game = await createGame(users[0].creds.accessToken, gameSettings, tasks);
+        await deleteGame(game.creds.accessToken, game.gameid);
+        expect(getGame(game.creds.accessToken, game.gameid)).rejects.toThrow();
     });
 });
 
@@ -334,18 +348,31 @@ describe("player management and task submission", () => {
     });
 
     test("submitTask", async () => {
+        // Submit the first task successfully
         const taskId = tasks[0]._id.toString();
         const taskId2 = tasks[1]._id.toString();
         await submitTask(users[1].creds.accessToken, gameId, taskId, ["4"]);
         
+        // Check for a successful submission
         let player = await viewPlayer(users[1].creds.accessToken, gameId, users[1].username);
-        const taskSubmission = player!.tasksSubmitted.find((submission: any) => submission.taskid.toString() === taskId.toString());
+        const taskSubmission = player.tasksSubmitted.find((submission: any) => submission.taskid.toString() === taskId.toString());
         expect(taskSubmission).toBeDefined();
         expect(taskSubmission!.success).toBe(true);
-        expect(player!.done).toBe(false);
+        expect(player.done).toBe(false);
 
+        // Submit the last task successfully & check for completion
         await submitTask(users[1].creds.accessToken, gameId, taskId2, ["Paris"]);
         player = await viewPlayer(users[1].creds.accessToken, gameId, users[1].username);
-        expect(player!.done).toBe(true);
+        expect(player.done).toBe(true);
+
+        // Assert max attempts reached
+        await expect(submitTask(users[1].creds.accessToken, gameId, taskId2, ["Paris"])).rejects.toThrow();
+    });
+
+    test("deletePlayer", async() => {
+        await signup("newperson", "newpass");
+        await joinGame((await login("newperson", "newpass")).accessToken, gameId, "player");
+        await expect(deletePlayer(users[0].creds.accessToken, gameId, "newperson")).resolves.not.toThrow();
+        expect((await getPublicGame(gameId)).players).not.toContain("newperson");
     });
 })

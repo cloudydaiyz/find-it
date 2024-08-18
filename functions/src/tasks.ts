@@ -54,10 +54,10 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
                 assert(event.headers.token != undefined, "Must have a token for this operation");
                 assert(event.body, "Must have a request body");
 
-                const parsedBody = JSON.parse(event.body);
-                assert(answersParser.safeParse(parsedBody.answers).success, "Invalid body");
+                const body = JSON.parse(event.body);
+                assert(answersParser.safeParse(body.answers).success, "Invalid body");
 
-                result = await submitTask(event.headers.token, submitPathTest.gameid, submitPathTest.taskid, parsedBody.answers);
+                result = await submitTask(event.headers.token, submitPathTest.gameid, submitPathTest.taskid, body.answers);
             } else {
                 throw new Error("Invalid request method");
             }

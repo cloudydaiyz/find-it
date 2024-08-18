@@ -3,10 +3,10 @@
 import jwt from "jsonwebtoken";
 import { AccessCredentials, CreateGameConfirmation, GameSchema, GameSettings, PlayerRole, PublicGameSchema, TaskSchema, UpdateGameStateConfirmation, UserRole, UserToken } from "./types";
 import { ObjectId, SetFields, UpdateFilter, WithId } from "mongodb";
-import { getGameColl, getPlayerColl, getAdminCodes, getClient } from "./core";
+import { getGameColl, getPlayerColl, getClient } from "./core";
 import { verifyToken } from "./auth";
 import assert from "assert";
-import { MAX_ADMINS, MAX_GAMES } from "./constants";
+import { ACCESS_TOKEN_KEY, ADMIN_CODES, MAX_ADMINS, MAX_GAMES, REFRESH_TOKEN_KEY } from "./constants";
 
 /**
  * Upgrades user credentials to game-based credentials
@@ -26,12 +26,12 @@ function upgradeCredentials(token: UserToken, gameId: ObjectId, role: UserRole):
     // Create new tokens with upgraded credentials to return
     const access_token = jwt.sign(
         creds, 
-        process.env['ACCESS_TOKEN_KEY'] as string, 
+        ACCESS_TOKEN_KEY, 
         { expiresIn: "15min" }
     );
     const refresh_token = jwt.sign(
         creds, 
-        process.env['REFRESH_TOKEN_KEY'] as string, 
+        REFRESH_TOKEN_KEY, 
         { expiresIn: "3hr" }
     );
 
@@ -46,7 +46,7 @@ export async function createGame(token: string, settings: GameSettings, tasks: T
     const games = await getGameColl().find().toArray();
     assert(games.length < MAX_GAMES, "Max games reached");
 
-    const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
+    const decodedToken = jwt.verify(token, ACCESS_TOKEN_KEY) as UserToken;
     tasks.forEach(t => t._id = new ObjectId());
     const taskids = tasks.map(t => t._id.toString());
 
@@ -69,12 +69,12 @@ export async function joinGame(token: string, rawGameId: string, role: PlayerRol
     const gameId = new ObjectId(rawGameId);
 
     // Ensure the code for an admin role is correct
-    const adminCodes = getAdminCodes();
+    const adminCodes = ADMIN_CODES;
     assert(role != "admin" || code && adminCodes && adminCodes.includes(code),
             "Invalid admin creds");
 
     // Decode the token and get the game to verify the player doesn't already exist
-    const decodedToken = jwt.verify(token, process.env['ACCESS_TOKEN_KEY'] as string) as UserToken;
+    const decodedToken = jwt.verify(token, ACCESS_TOKEN_KEY) as UserToken;
     const game = await getGameColl().findOne({ _id: gameId });
     assert(game, "Invalid game ID");
     assert(decodedToken.username != game.host 
@@ -247,4 +247,28 @@ export async function restartGame(token: string, rawGameId: string): Promise<Cre
 
     // Create a new game with the same settings and tasks as the current game
     return createGame(token, game.settings, game.tasks);
+}
+
+// Deletes the specified game
+export async function deleteGame(token: string, rawGameId: string): Promise<GameSchema> {
+    const gameId = new ObjectId(rawGameId);
+    verifyToken(token, gameId, ["host", "admin"]);
+
+    const game = await getGameColl().findOne({ _id: gameId });
+    assert(game, "Invalid game ID");
+    assert(game.state != "running", "Game is still running, unable to delete");
+
+    const session = getClient().startSession();
+    await session.withTransaction(async () => {
+
+        // Delete game
+        const gameDeletion = await getGameColl().deleteOne({ _id: gameId });
+        assert(gameDeletion.acknowledged && gameDeletion.deletedCount == 1, "Unable to complete delete operation");
+
+        // Delete players associated with the game
+        const playerDeletion = await getPlayerColl().deleteMany({ gameId: gameId });
+        assert(playerDeletion.acknowledged, "Unable to complete delete operation");
+    }).then(() => session.endSession());
+
+    return game;
 }

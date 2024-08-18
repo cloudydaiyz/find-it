@@ -11,7 +11,7 @@ let playerColl: Collection<PlayerSchema>;
 
 // Sets the client for DB queries to a MongoClient with the given URI, and
 // the respective database and collections
-export async function setClient(uri: string) {
+export async function setClient(uri: string): Promise<void> {
     const c = new MongoClient(uri);
     if(client) client.close();
 
@@ -26,31 +26,26 @@ export async function setClient(uri: string) {
 }
 
 // Retrieves the MongoClient currently being used
-export function getClient() {
+export function getClient(): MongoClient {
     return client;
 }
 
 // Retrieves the database currently being used
-export function getDb() {
+export function getDb(): Db {
     return db;
 }
 
 // Retrieves the user collection
-export function getUserColl() {
+export function getUserColl(): Collection<UserSchema> {
     return userColl;
 }
 
 // Retrieves the game collection
-export function getGameColl() {
+export function getGameColl(): Collection<GameSchema> {
     return gameColl;
 }
 
 // Retrieves the player collection
-export function getPlayerColl() {
+export function getPlayerColl(): Collection<PlayerSchema> {
     return playerColl;
-}
-
-// Retrieves the list of admin codes based on the ADMIN_CODE env variable
-export function getAdminCodes() {
-    return process.env['ADMIN_CODES']?.split(',');
 }
