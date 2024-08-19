@@ -6,7 +6,7 @@
 // export * as types from "./types";
 
 // Non namespaced
-export * from "./core";
+export * from "./mongodb";
 export * from "./game";
 export * from "./players";
 export * from "./tasks";

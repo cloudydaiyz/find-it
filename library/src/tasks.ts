@@ -1,7 +1,7 @@
 // Task management functions
 
 import { ObjectId } from "mongodb";
-import { getClient, getGameColl, getPlayerColl } from "./core";
+import { getClient, getGameColl, getPlayerColl } from "./mongodb";
 import { verifyToken } from "./auth";
 import { PublicTaskSchema, TaskSchema, TaskSubmission, TaskSubmissionConfirmation } from "./types";
 import assert from "assert";

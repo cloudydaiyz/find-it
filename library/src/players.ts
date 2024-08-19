@@ -1,7 +1,7 @@
 // Player management functions
 
 import assert from "assert";
-import { getClient, getGameColl, getPlayerColl } from "./core";
+import { getClient, getGameColl, getPlayerColl } from "./mongodb";
 import { verifyToken } from "./auth";
 import { PlayerSchema, PublicPlayerSchema } from "./types";
 import { ObjectId, WithId } from "mongodb";

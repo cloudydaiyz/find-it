@@ -1,7 +1,7 @@
 // Authentication functions
 
 import assert from "assert";
-import { getClient, getGameColl, getPlayerColl, getUserColl } from "./core";
+import { getClient, getGameColl, getPlayerColl, getUserColl } from "./mongodb";
 import jwt from "jsonwebtoken";
 import { AccessCredentials, UserRole, UserSchema, UserToken } from "./types";
 import { ObjectId, WithId } from "mongodb";

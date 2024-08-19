@@ -1,4 +1,3 @@
-import { jest } from "@jest/globals";
 import { APIGatewayProxyEventQueryStringParameters, APIGatewayProxyEventV2 } from "aws-lambda";
 
 export const exampleContext = {

@@ -26,6 +26,7 @@ export interface GameSchema {
     settings: GameSettings; // immutable once game is running or ended
     tasks: TaskSchema[]; // tasks embedded in order (since they're static and don't change)
     state: GameState;
+    stopScheduleArn?: string;
 
     host: string;
     admins: string[];

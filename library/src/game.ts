@@ -3,10 +3,12 @@
 import jwt from "jsonwebtoken";
 import { AccessCredentials, CreateGameConfirmation, GameSchema, GameSettings, PlayerRole, PublicGameSchema, TaskSchema, UpdateGameStateConfirmation, UserRole, UserToken } from "./types";
 import { ObjectId, SetFields, UpdateFilter, WithId } from "mongodb";
-import { getGameColl, getPlayerColl, getClient } from "./core";
+import { getGameColl, getPlayerColl, getClient } from "./mongodb";
 import { verifyToken } from "./auth";
 import assert from "assert";
-import { ACCESS_TOKEN_KEY, ADMIN_CODES, MAX_ADMINS, MAX_GAMES, REFRESH_TOKEN_KEY } from "./constants";
+import { ACCESS_TOKEN_KEY, ADMIN_CODES, MAX_ADMINS, MAX_GAMES, REFRESH_TOKEN_KEY, SCHEDULER_ROLE_ARN } from "./constants";
+import { SchedulerClient, CreateScheduleCommand, DeleteScheduleCommand, ResourceNotFoundException } from "@aws-sdk/client-scheduler";
+import { APIGatewayProxyEventV2 } from "aws-lambda";
 
 /**
  * Upgrades user credentials to game-based credentials
@@ -183,7 +185,8 @@ export async function leaveGame(token: string, rawGameId: string): Promise<void>
 }
 
 // Begins the specified game if it's ready
-export async function startGame(token: string, rawGameId: string): Promise<UpdateGameStateConfirmation> {
+export async function startGame(token: string, rawGameId: string, gameFunctionArn?: string, 
+    stopGameEvent?: APIGatewayProxyEventV2): Promise<UpdateGameStateConfirmation> {
     const gameId = new ObjectId(rawGameId);
     verifyToken(token, gameId, ["host", "admin"]);
     
@@ -194,7 +197,7 @@ export async function startGame(token: string, rawGameId: string): Promise<Updat
 
     // Update the start time and end time based on the game's duration
     const currentTime = Date.now();
-    const endTime = game.settings.duration == 0 ? 0 : Date.now() + game!.settings.duration;
+    const endTime = game.settings.duration == 0 ? 0 : currentTime + game.settings.duration * 1000;
     const result = await getGameColl().updateOne({ _id: gameId }, {
         $set: {
             state: "running",
@@ -204,9 +207,30 @@ export async function startGame(token: string, rawGameId: string): Promise<Updat
     });
     assert(result.acknowledged && result.modifiedCount == 1, "Failed to start game");
 
-    // TODO: Set a timer to end the game at the specified time
+    // Sets up an EventBridge timer to end the game at the specified time
     if(game.settings.duration > 0) {
-        
+        assert(gameFunctionArn, "gameFunctionArn must be specified if the game has a duration > 0.");
+        assert(stopGameEvent, "stopGameEvent must be specified if the game has a duration > 0.");
+        stopGameEvent.headers.source = "scheduler";
+
+        const schedulerClient = new SchedulerClient();
+        const command = new CreateScheduleCommand({
+            Name: `end-game-${rawGameId}`,
+            StartDate: new Date(currentTime), // TODO: convert to UTC
+            ScheduleExpression: (new Date(endTime)).toISOString(),
+            Target: {
+                Arn: gameFunctionArn,
+                RoleArn: SCHEDULER_ROLE_ARN,
+                Input: JSON.stringify(stopGameEvent)
+            },
+            FlexibleTimeWindow: {
+                Mode: "OFF"
+            },
+            ActionAfterCompletion: "DELETE"
+        });
+        const response = await schedulerClient.send(command);
+        schedulerClient.destroy();
+        game.stopScheduleArn = response.ScheduleArn;
     }
 
     return {
@@ -216,7 +240,7 @@ export async function startGame(token: string, rawGameId: string): Promise<Updat
 }
 
 // Stops the specified game if it's currently running
-export async function stopGame(token: string, rawGameId: string): Promise<UpdateGameStateConfirmation> {
+export async function stopGame(token: string, rawGameId: string, fromSchedule?: boolean): Promise<UpdateGameStateConfirmation> {
     const gameId = new ObjectId(rawGameId);
     verifyToken(token, gameId, ["host", "admin"]);
 
@@ -233,6 +257,27 @@ export async function stopGame(token: string, rawGameId: string): Promise<Update
         }
     });
     assert(result.acknowledged && result.modifiedCount == 1, "Failed to end game");
+
+    // Delete the associated scheduler if the request wasn't from the scheduler
+    if(!fromSchedule) {
+        try {
+            const schedulerClient = new SchedulerClient();
+            const command = new DeleteScheduleCommand({
+                Name: `end-game-${rawGameId}`
+            });
+            schedulerClient.send(command);
+            schedulerClient.destroy();
+        } catch(e) {
+
+            // Even if there's an error here, either way we were able to stop the game
+            // successfully, so just log the results
+            if(e instanceof ResourceNotFoundException) {
+                console.log("No schedule to destroy");
+            } else {
+                console.log("Unable to destroy schedule, reason: " + (e as Error).message);
+            }
+        }
+    }
 
     return {
         startTime: game.settings.startTime,

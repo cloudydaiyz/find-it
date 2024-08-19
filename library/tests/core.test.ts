@@ -1,10 +1,10 @@
 import "dotenv/config";
-import { describe, test, expect, beforeAll, afterAll, it } from "@jest/globals";
+import { describe, test, expect, beforeAll, afterAll, it, jest } from "@jest/globals";
 import { MongoClient, ObjectId } from "mongodb";
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import jwt from "jsonwebtoken";
 
-import { setClient, getClient } from "../src/core"
+import { setClient, getClient } from "../src/mongodb"
 import { login, signup, refresh, verifyToken, deleteUser } from "../src/auth";
 import { createGame, joinGame, getGame, leaveGame, startGame, stopGame, restartGame, getPublicGame, listPublicGames, deleteGame } from "../src/game";
 import { viewAllPublicTasks, viewAllTasks, viewPublicTask, viewTask, submitTask } from "../src/tasks";
@@ -14,6 +14,8 @@ import { AccessCredentials, GameSettings, TaskSchema } from "../src/types";
 import { ACCESS_TOKEN_KEY, ADMIN_CODES } from "../src/constants";
 const envVars = [ "MONGODB_CONNECTION_STRING", "ACCESS_TOKEN_KEY", "REFRESH_TOKEN_KEY" ];
 
+jest.mock("@aws-sdk/client-scheduler");
+
 let mongod: MongoMemoryReplSet;
 let c: MongoClient;
 
@@ -21,7 +23,7 @@ let c: MongoClient;
 
 const gameSettings: GameSettings = {
     name: "Test Game",
-    duration: 60000, // 1 minute
+    duration: 0, // 1 minute
     startTime: 0,
     endTime: 0,
     ordered: true,
