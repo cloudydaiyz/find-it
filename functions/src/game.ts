@@ -1,4 +1,4 @@
-import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings, deleteGame } from "@cloudydaiyz/vulture-lib";
+import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings, deleteGame, MAX_PLAYERS, MAX_TASKS } from "@cloudydaiyz/vulture-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import { z } from "zod";
@@ -7,14 +7,10 @@ import assert from "assert";
 assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
 const c = setClient(process.env["MONGODB_CONNECTION_STRING"]);
 
-// Constants
-const MAX_TASKS = 20;
-const MAX_PLAYERS = 100;
-
 // Type checking GameSettings, will be moved into lib soon
 const gameSettingsParser = z.object({
     name: z.string(),
-    duration: z.number().nonnegative(),
+    duration: z.number().nonnegative().refine(n => n == 0 || n >= 30),
     startTime: z.number().nonnegative(),
     ordered: z.boolean(),
     minPlayers: z.number().nonnegative().max(MAX_PLAYERS),
@@ -49,6 +45,7 @@ const taskSchemaParser = z.object({
 /**
  * createGame constraints:
  * - scalePoints must be false if the game has an indefinite duration
+ * - the game must last at least 30 seconds
  */
 const createGameParser = z.object({
     settings: gameSettingsParser,
