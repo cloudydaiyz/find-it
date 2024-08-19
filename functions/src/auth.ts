@@ -1,4 +1,4 @@
-import { setClient, login, signup, getClient, refresh } from "@cloudydaiyz/vulture-lib";
+import { setClient, login, signup, getClient, refresh, deleteUser } from "@cloudydaiyz/vulture-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
@@ -18,6 +18,7 @@ const refreshParser = z.object({
 const registerPath = Path.createPath('/register');
 const loginPath = Path.createPath('/login');
 const refreshPath = Path.createPath('/refresh');
+const userPath = Path.createPath('/user/:username');
 
 const c = setClient(process.env["MONGODB_CONNECTION_STRING"]);
 
@@ -32,11 +33,12 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
         const registerPathTest = registerPath.test(path);
         const loginPathTest = loginPath.test(path);
         const refreshPathTest = refreshPath.test(path);
+        const userPathTest = userPath.test(path);
 
-        assert(event.body, "Must have an event body for this operation");
-        const body = JSON.parse(event.body);
-        
         if(method == "POST") {
+            assert(event.body, "Must have an event body for this operation");
+            const body = JSON.parse(event.body);
+
             if(registerPathTest) {
                 assert(loginParser.safeParse(body).success, "Invalid body");
                 await signup(body.username, body.password);
@@ -47,6 +49,13 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
             } else if(refreshPathTest) {
                 assert(refreshParser.safeParse(body).success, "Invalid body");
                 result = await refresh(body.refreshToken);
+            } else {
+                throw new Error("Invalid path");
+            }
+        } else if(method == "DELETE") {
+            if(userPathTest) {
+                assert(event.headers.code, "Must have an admin code for this operation");
+                await deleteUser(event.headers.code, userPathTest.username);
             } else {
                 throw new Error("Invalid path");
             }

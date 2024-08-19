@@ -50,6 +50,10 @@ export async function createGame(token: string, settings: GameSettings, tasks: T
     tasks.forEach(t => t._id = new ObjectId());
     const taskids = tasks.map(t => t._id.toString());
 
+    // Set the end time based on the start time and duration
+    settings.endTime = 0;
+    if(settings.duration) settings.endTime = settings.startTime + settings.duration;
+
     const res = await getGameColl().insertOne({
         tasks: tasks,
         settings: settings,
@@ -83,6 +87,7 @@ export async function joinGame(token: string, rawGameId: string, role: PlayerRol
         "User already in game");
     assert(role != "player" || game.players.length < game.settings.maxPlayers, "Maximum player capacity reached for this game");
     assert(role != "admin" || game.admins.length < MAX_ADMINS, "Maximum admin capacity reached for this game");
+    assert(role == "admin" || game.state != "ended", "This game has already ended; unable to join");
 
     // Start a MongoDB client session to begin a transaction
     const session = getClient().startSession();

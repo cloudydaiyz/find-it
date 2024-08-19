@@ -6,7 +6,7 @@ import * as game from "../src/game";
 jest.mock("@cloudydaiyz/vulture-lib");
 jest.mock("mongodb");
 
-import { createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings } from "@cloudydaiyz/vulture-lib";
+import { createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings, deleteGame } from "@cloudydaiyz/vulture-lib";
 import { createEvent, exampleCallback, exampleContext } from "./test-utils";
 
 afterAll(async () => { 
@@ -33,8 +33,8 @@ describe("game handler tests", () => {
             startTime: 0,
             endTime: 0,
             ordered: false,
-            minPlayers: 0,
-            maxPlayers: 0,
+            minPlayers: 1,
+            maxPlayers: 1,
             joinMidGame: false,
             numRequiredTasks: 0
         };
@@ -61,7 +61,6 @@ describe("game handler tests", () => {
         );
 
         const result = await game.handler(event, exampleContext, exampleCallback) as APIGatewayProxyStructuredResultV2;
-        console.log(result.body);
         expect(result.statusCode).toBe(200);
         // expect(getPublicGame).toHaveBeenCalledWith("123456");
         expect(getPublicGame).toHaveBeenCalled();
@@ -122,6 +121,18 @@ describe("game handler tests", () => {
         expect(result.statusCode).toBe(200);
         // expect(restartGame).toHaveBeenCalledWith("dummy-token", "123456");
         expect(restartGame).toHaveBeenCalled();
+    });
+
+    it("should delete a game", async () => {
+        const event = createEvent(
+            { "Content-Type": "application/json", "token": "dummy-token" },
+            "/games/123456",
+            "DELETE",
+        );
+
+        const result = await game.handler(event, exampleContext, exampleCallback) as APIGatewayProxyStructuredResultV2;
+        expect(result.statusCode).toBe(200);
+        expect(deleteGame).toHaveBeenCalledWith("dummy-token", "123456");
     });
 
     it("should return error for missing token", async () => {

@@ -6,7 +6,7 @@ import * as auth from "../src/auth";
 jest.mock("@cloudydaiyz/vulture-lib");
 jest.mock("mongodb");
 
-import { login, signup, refresh } from "@cloudydaiyz/vulture-lib";
+import { login, signup, refresh, deleteUser } from "@cloudydaiyz/vulture-lib";
 import { createEvent, exampleCallback, exampleContext } from "./test-utils";
 
 afterAll(async () => { 
@@ -51,6 +51,18 @@ describe("auth handler tests", () => {
         const result = await auth.handler(event, exampleContext, exampleCallback) as APIGatewayProxyStructuredResultV2;
         expect(result.statusCode).toBe(200);
         expect(refresh).toHaveBeenCalledWith("testtoken");
+    });
+
+    it("should delete a user", async () => {
+        const event = createEvent(
+            { "Content-Type": "application/json", "code": "admin-code" },
+            "/user/blah",
+            "DELETE",
+        );
+
+        const result = await auth.handler(event, exampleContext, exampleCallback) as APIGatewayProxyStructuredResultV2;
+        expect(result.statusCode).toBe(200);
+        expect(deleteUser).toHaveBeenCalledWith("admin-code", "blah");
     });
 
     it("should return error for missing body", async () => {

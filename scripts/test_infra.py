@@ -5,6 +5,11 @@ import pytest
 # Get all the URLs for our infrastructure
 out = update_infra.main({'output': True, 'plan': False, 'no-prod': False, 'destroy': False})
 
+
+'''
+### FIXTURES ###
+'''
+
 @pytest.fixture
 def auth_url():
     return out['lambda_function_urls']['value']['auth']['function_url']
@@ -32,10 +37,9 @@ def new_game(auth_url, game_url):
         "name": "test game",
         "duration": 0,
         "startTime": 0,
-        "endTime": 0,
         "ordered": False,
-        "minPlayers": 0,
-        "maxPlayers": 0,
+        "minPlayers": 1,
+        "maxPlayers": 5,
         "joinMidGame": False,
         "numRequiredTasks": 0
     }
@@ -59,10 +63,15 @@ def new_game(auth_url, game_url):
     host_creds = res_json['creds']
     game_id = res_json['gameid']
     task_ids = res_json['taskids']
-    return (host_creds, game_id, task_ids)
+    yield (host_creds, game_id, task_ids)
+
+    # Delete the game
+    res = requests.delete(game_url + "/games/" + game_id, 
+                        headers={"token": host_creds['accessToken']})
+    assert res.status_code == 200
 
 @pytest.fixture
-def new_running_game_with_player(new_game, auth_url, players_url):
+def new_game_with_player(new_game, auth_url, players_url):
     (host_creds, game_id, task_ids) = new_game
 
     # login
@@ -80,20 +89,8 @@ def new_running_game_with_player(new_game, auth_url, players_url):
     return (host_creds, game_id, task_ids, player_creds)
 
 @pytest.fixture
-def new_running_game_with_player(new_game, auth_url, game_url, players_url):
-    (host_creds, game_id, task_ids) = new_game
-
-    # login
-    player_login = requests.post(auth_url + "/login", json={"username": "another", "password": "person"})
-    assert player_login.status_code == 200
-    creds = player_login.json()
-
-    # join the new game
-    res = requests.post(f"{players_url}/games/{game_id}/players", 
-                        json={"role": "player"}, 
-                        headers={"token": creds['accessToken']})
-    assert res.status_code == 200
-    player_creds = res.json()
+def new_running_game_with_player(new_game_with_player, game_url):
+    (host_creds, game_id, task_ids, player_creds) = new_game_with_player
 
     # start the new game
     res = requests.post(f"{game_url}/games/{game_id}",
@@ -101,7 +98,18 @@ def new_running_game_with_player(new_game, auth_url, game_url, players_url):
                         headers = {"token": host_creds["accessToken"]})
     assert res.status_code == 200
 
-    return (host_creds, game_id, task_ids, player_creds)
+    yield (host_creds, game_id, task_ids, player_creds)
+
+    # stop the new game
+    res = requests.post(f"{game_url}/games/{game_id}",
+                        json={"action": "stop"},
+                        headers = {"token": host_creds["accessToken"]})
+    assert res.status_code == 200
+
+
+'''
+### TESTS ###
+'''
 
 class TestAuth:
 
@@ -149,13 +157,14 @@ class TestGame:
         assert res.status_code == 200
 
     # should start, stop, and restart a game
-    def test_game_actions(self, new_game, game_url):
-        (host_creds, game_id, task_ids) = new_game
+    def test_game_actions(self, new_game_with_player, game_url):
+        (host_creds, game_id, task_ids, player_creds) = new_game_with_player
 
         # should start a game
         res = requests.post(f"{game_url}/games/{game_id}",
                             json={"action": "start"},
                             headers = {"token": host_creds["accessToken"]})
+        print(res.text)
         assert res.status_code == 200
 
         # should end a game
@@ -173,8 +182,8 @@ class TestGame:
 class TestPlayers:
 
     # host shouldn't be able to join the game
-    def test_host_cant_join(self, new_running_game_with_player, players_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_host_cant_join(self, new_game, players_url):
+        (host_creds, game_id, task_ids) = new_game
 
         res = requests.post(f"{players_url}/games/{game_id}/players", 
                             json={"role": "player"}, 
@@ -182,38 +191,40 @@ class TestPlayers:
         assert res.status_code == 400
 
     # should view all public players
-    def test_view_public_players(self, new_running_game_with_player, players_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_view_public_players(self, new_game, players_url):
+        (host_creds, game_id, task_ids) = new_game
 
         res = requests.get(f"{players_url}/games/{game_id}/players?public=true")
         assert res.status_code == 200
 
     # should view all players
-    def test_view_private_players(self, new_running_game_with_player, players_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_view_private_players(self, new_game, players_url):
+        (host_creds, game_id, task_ids) = new_game
 
         res = requests.get(f"{players_url}/games/{game_id}/players?public=false", 
                             headers={"token": host_creds['accessToken']})
         assert res.status_code == 200
 
     # should view a player
-    def test_view_public_player(self, new_running_game_with_player, players_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_view_public_player(self, new_game_with_player, players_url):
+        (host_creds, game_id, task_ids, player_creds) = new_game_with_player
 
         res = requests.get(f"{players_url}/games/{game_id}/players/another?public=true")
+        print(res.text)
         assert res.status_code == 200
 
     # should view a private player
-    def test_view_private_player(self, new_running_game_with_player, players_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_view_private_player(self, new_game_with_player, players_url):
+        (host_creds, game_id, task_ids, player_creds) = new_game_with_player
 
         res = requests.get(f"{players_url}/games/{game_id}/players/another?public=false", 
                             headers={"token": host_creds['accessToken']})
+        print(res.text)
         assert res.status_code == 200
 
     # players should be able to view their own info
-    def test_view_players_own_info(self, new_running_game_with_player, players_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_view_players_own_info(self, new_game_with_player, players_url):
+        (host_creds, game_id, task_ids, player_creds) = new_game_with_player
 
         res = requests.get(f"{players_url}/games/{game_id}/players/another?public=false", 
                             headers={"token": player_creds['accessToken']})
@@ -222,30 +233,30 @@ class TestPlayers:
 class TestTasks:
 
     # should view all public tasks
-    def test_tasks(self, new_running_game_with_player, tasks_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_tasks(self, new_game, tasks_url):
+        (host_creds, game_id, task_ids) = new_game
 
         res = requests.get(f"{tasks_url}/games/{game_id}/tasks?public=true")
         assert res.status_code == 200
 
     # should view (private) info for all tasks
-    def test_view_private_tasks(self, new_running_game_with_player, tasks_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_view_private_tasks(self, new_game, tasks_url):
+        (host_creds, game_id, task_ids) = new_game
 
         res = requests.get(f"{tasks_url}/games/{game_id}/tasks?public=false", 
                             headers={"token": host_creds['accessToken']})
         assert res.status_code == 200
 
     # should view public task
-    def test_view_public_task(self, new_running_game_with_player, tasks_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_view_public_task(self, new_game, tasks_url):
+        (host_creds, game_id, task_ids) = new_game
 
         res = requests.get(f"{tasks_url}/games/{game_id}/tasks/{task_ids[0]}?public=true")
         assert res.status_code == 200
 
     # should view (private) info for task
-    def test_view_private_task(self, new_running_game_with_player, tasks_url):
-        (host_creds, game_id, task_ids, player_creds) = new_running_game_with_player
+    def test_view_private_task(self, new_game, tasks_url):
+        (host_creds, game_id, task_ids) = new_game
 
         res = requests.get(f"{tasks_url}/games/{game_id}/tasks/{task_ids[0]}?public=false", 
                             headers={"token": host_creds['accessToken']})

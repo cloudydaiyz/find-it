@@ -1,4 +1,4 @@
-import { setClient, joinGame, leaveGame, viewAllPlayers, viewAllPublicPlayers, viewPlayer, viewPublicPlayer } from "@cloudydaiyz/vulture-lib";
+import { setClient, joinGame, leaveGame, viewAllPlayers, viewAllPublicPlayers, viewPlayer, viewPublicPlayer, deletePlayer } from "@cloudydaiyz/vulture-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import assert from "assert";
@@ -46,7 +46,8 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
 
                 const body = JSON.parse(event.body);
                 assert(joinGameBodyParser.safeParse(body).success, "Invalid body");
-                result = await joinGame(event.headers.token, playersPathTest.gameid, body.role, body.code);
+
+                result = await joinGame(event.headers.token, playersPathTest.gameid, body.role, event.headers.code);
             } else {
                 throw new Error("Invalid request method");
             }
@@ -62,6 +63,9 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
                     
                     result = player;
                 }
+            } else if(method == "DELETE") {
+                assert(event.headers.token != undefined, "Must have a token for this operation");
+                result = await deletePlayer(event.headers.token, playerPathTest.gameid, playerPathTest.username);
             } else {
                 throw new Error("Invalid request method");
             }

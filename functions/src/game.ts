@@ -1,4 +1,4 @@
-import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings } from "@cloudydaiyz/vulture-lib";
+import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings, deleteGame } from "@cloudydaiyz/vulture-lib";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import { z } from "zod";
@@ -16,13 +16,12 @@ const gameSettingsParser = z.object({
     name: z.string(),
     duration: z.number().nonnegative(),
     startTime: z.number().nonnegative(),
-    endTime: z.number().nonnegative(),
     ordered: z.boolean(),
     minPlayers: z.number().nonnegative().max(MAX_PLAYERS),
     maxPlayers: z.number().min(1).max(MAX_PLAYERS),
     joinMidGame: z.boolean(),
     numRequiredTasks: z.number().nonnegative().max(MAX_TASKS),
-});
+}).refine(obj => obj.minPlayers <= obj.maxPlayers);
 
 /**
  * Type checking TaskSchema, will be moved into lib soon
@@ -54,14 +53,16 @@ const taskSchemaParser = z.object({
 const createGameParser = z.object({
     settings: gameSettingsParser,
     tasks: taskSchemaParser
-}).refine(obj => obj.tasks.every(t => obj.settings.duration != 0 || !t.scalePoints));
+}).refine(obj => obj.tasks.every(t => obj.settings.duration != 0 || !t.scalePoints)
+    && obj.settings.numRequiredTasks <= obj.tasks.length
+);
 
 const gamesPath = Path.createPath('/games');
 const specificGamePath = Path.createPath('/games/:gameid');
 
-export const handler: LambdaFunctionURLHandler = async(event) => {
+export const handler: LambdaFunctionURLHandler = async(event, context) => {
     await c;
-    
+
     const path = event.requestContext.http.path;
     const method = event.requestContext.http.method;
     let publicVisibility = event.queryStringParameters?.public == "false" ? false : true;
@@ -103,10 +104,13 @@ export const handler: LambdaFunctionURLHandler = async(event) => {
                 } else if(body.action == "stop") {
                     result = await stopGame(event.headers.token, specificGamePathTest.gameid);
                 } else if(body.action == "restart") {
-                    result = await restartGame(event.headers.token, specificGamePathTest.gameid as string);
+                    result = await restartGame(event.headers.token, specificGamePathTest.gameid);
                 } else {
                     throw new Error("Invalid action");
                 }
+            } else if(method == "DELETE") {
+                assert(event.headers.token != undefined, "Must have a token for this operation");
+                result = await deleteGame(event.headers.token, specificGamePathTest.gameid);
             } else {
                 throw new Error("Method undefined for this operation");
             }

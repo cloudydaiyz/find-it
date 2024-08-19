@@ -6,7 +6,7 @@ import * as players from "../src/players";
 jest.mock("@cloudydaiyz/vulture-lib");
 jest.mock("mongodb");
 
-import { PlayerSchema } from "@cloudydaiyz/vulture-lib";
+import { deletePlayer, PlayerSchema } from "@cloudydaiyz/vulture-lib";
 import { joinGame, leaveGame, viewAllPlayers, viewAllPublicPlayers, viewPlayer, viewPublicPlayer } from "@cloudydaiyz/vulture-lib";
 import { WithId } from "mongodb";
 import { createEvent, exampleCallback, exampleContext } from "./test-utils";
@@ -103,6 +103,19 @@ describe("players handler tests", () => {
         expect(result.statusCode).toBe(200);
         // expect(viewPlayer).toHaveBeenCalledWith("dummy-token", "123456", "testuser");
         expect(viewPlayer).toHaveBeenCalled();
+    });
+
+    it("should delete a player", async () => {
+        const event = createEvent(
+            { "Content-Type": "application/json", "token": "dummy-token" },
+            "/games/123456/players/testuser",
+            "DELETE"
+        );
+
+        const result = await players.handler(event, exampleContext, exampleCallback) as APIGatewayProxyStructuredResultV2;
+        expect(result.statusCode).toBe(200);
+        // expect(viewPlayer).toHaveBeenCalledWith("dummy-token", "123456", "testuser");
+        expect(deletePlayer).toHaveBeenCalledWith("dummy-token", "123456", "testuser");
     });
 
     it("should return error for missing token", async () => {
