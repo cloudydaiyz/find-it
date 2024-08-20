@@ -19,6 +19,7 @@ data "archive_file" "lambda_layer" {
   output_path = "${path.module}/stage/zip/layer.zip"
 }
 
+# Layer for all lambda functions
 resource "aws_lambda_layer_version" "lambda_layer" {
   filename   = data.archive_file.lambda_layer.output_path
   layer_name = "game_center_layer"
@@ -103,6 +104,7 @@ resource "aws_lambda_function" "controller" {
   }
 }
 
+# URL for lambda functions except game function
 resource "aws_lambda_function_url" "controller" {
   for_each = setsubtract(local.handlers, ["game"])
 
@@ -192,11 +194,13 @@ resource "aws_lambda_function" "game_controller" {
   }
 }
 
+# URL for game lambda function
 resource "aws_lambda_function_url" "game_controller" {
   function_name      = aws_lambda_function.game_controller.arn
   authorization_type = "NONE"
 }
 
+# Creates `endpoints.js` file with the endpoints for each lambda function, use for website
 resource "local_file" "endpointsjs" {
   content  = templatefile("${path.module}/endpoints.tpl", { 
     endpoint_arns = merge(

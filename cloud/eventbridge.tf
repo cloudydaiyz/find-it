@@ -25,6 +25,7 @@ data "aws_iam_policy_document" "scheduler_policy" {
   }
 }
 
+# IAM role for eventbridge
 resource "aws_iam_role" "iam_for_scheduler" {
   name = "iam_for_scheduler"
 
@@ -36,6 +37,7 @@ resource "aws_iam_role" "iam_for_scheduler" {
   }
 }
 
+# Schedule group for schedules made by lambda function
 resource "aws_scheduler_schedule_group" "game" {
   name = local.scheduler_group_name
 }
