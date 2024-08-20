@@ -1,5 +1,5 @@
 import { setClient, createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings, deleteGame, MAX_PLAYERS, MAX_TASKS } from "@cloudydaiyz/vulture-lib";
-import { LambdaFunctionURLHandler } from "aws-lambda";
+import { APIGatewayProxyEventV2, LambdaFunctionURLHandler } from "aws-lambda";
 import { Path } from "path-parser";
 import { z } from "zod";
 import assert from "assert";
@@ -95,9 +95,37 @@ export const handler: LambdaFunctionURLHandler = async(event, context) => {
                 assert(event.headers.token != undefined, "Must have a token for this operation");
 
                 const body = JSON.parse(event.body);
-                
                 if(body.action == "start") {
-                    result = await startGame(event.headers.token, specificGamePathTest.gameid);
+                    const stopGameEvent = {
+                            version: "",
+                            routeKey: "",
+                            rawPath: "",
+                            rawQueryString: "",
+                            headers: { token: event.headers.token },
+                            requestContext: {
+                                accountId: "",
+                                apiId: "",
+                                domainName: "",
+                                domainPrefix: "",
+                                http: {
+                                    method: "POST",
+                                    path: `/games/${specificGamePathTest.gameid}`,
+                                    protocol: "",
+                                    sourceIp: "",
+                                    userAgent: ""
+                                },
+                                requestId: "",
+                                routeKey: "",
+                                stage: "",
+                                time: "",
+                                timeEpoch: 0
+                            },
+                            isBase64Encoded: false,
+                            body: JSON.stringify({ action: "stop" })
+                        } as APIGatewayProxyEventV2;
+                    
+                    result = await startGame(event.headers.token, specificGamePathTest.gameid, 
+                        context.invokedFunctionArn, stopGameEvent);
                 } else if(body.action == "stop") {
                     result = await stopGame(event.headers.token, specificGamePathTest.gameid);
                 } else if(body.action == "restart") {

@@ -7,7 +7,7 @@ jest.mock("@cloudydaiyz/vulture-lib");
 jest.mock("mongodb");
 
 import { createGame, getGame, restartGame, startGame, stopGame, listPublicGames, getPublicGame, GameSettings, deleteGame } from "@cloudydaiyz/vulture-lib";
-import { createEvent, exampleCallback, exampleContext } from "../src/utils";
+import { createEvent, exampleCallback, exampleContext } from "./utils";
 
 afterAll(async () => { 
     jest.restoreAllMocks();

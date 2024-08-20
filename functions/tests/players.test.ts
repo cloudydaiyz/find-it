@@ -9,7 +9,7 @@ jest.mock("mongodb");
 import { deletePlayer, PlayerSchema } from "@cloudydaiyz/vulture-lib";
 import { joinGame, leaveGame, viewAllPlayers, viewAllPublicPlayers, viewPlayer, viewPublicPlayer } from "@cloudydaiyz/vulture-lib";
 import { WithId } from "mongodb";
-import { createEvent, exampleCallback, exampleContext } from "../src/utils";
+import { createEvent, exampleCallback, exampleContext } from "./utils";
 
 afterAll(async () => { 
     jest.restoreAllMocks();

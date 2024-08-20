@@ -6,7 +6,7 @@ import { ObjectId, SetFields, UpdateFilter, WithId } from "mongodb";
 import { getGameColl, getPlayerColl, getClient } from "./mongodb";
 import { verifyToken } from "./auth";
 import assert from "assert";
-import { ACCESS_TOKEN_KEY, ADMIN_CODES, MAX_ADMINS, MAX_GAMES, REFRESH_TOKEN_KEY, SCHEDULER_ROLE_ARN } from "./constants";
+import { ACCESS_TOKEN_KEY, ADMIN_CODES, MAX_ADMINS, MAX_GAMES, REFRESH_TOKEN_KEY, SCHEDULER_GROUP_NAME, SCHEDULER_ROLE_ARN } from "./constants";
 import { SchedulerClient, CreateScheduleCommand, DeleteScheduleCommand, ResourceNotFoundException } from "@aws-sdk/client-scheduler";
 import { APIGatewayProxyEventV2 } from "aws-lambda";
 
@@ -213,16 +213,17 @@ export async function startGame(token: string, rawGameId: string, gameFunctionAr
         assert(stopGameEvent, "stopGameEvent must be specified if the game has a duration > 0.");
         stopGameEvent.headers.source = "scheduler";
 
+        console.log("beginning scheduler");
         const schedulerClient = new SchedulerClient();
         const command = new CreateScheduleCommand({
             Name: `end-game-${rawGameId}`,
-            StartDate: new Date(currentTime), // TODO: convert to UTC
-            ScheduleExpression: (new Date(endTime)).toISOString(),
+            ScheduleExpression: `at(${(new Date(endTime)).toISOString().substring(0, 19)})`,
             Target: {
                 Arn: gameFunctionArn,
                 RoleArn: SCHEDULER_ROLE_ARN,
                 Input: JSON.stringify(stopGameEvent)
             },
+            GroupName: SCHEDULER_GROUP_NAME,
             FlexibleTimeWindow: {
                 Mode: "OFF"
             },
@@ -230,6 +231,8 @@ export async function startGame(token: string, rawGameId: string, gameFunctionAr
         });
         const response = await schedulerClient.send(command);
         schedulerClient.destroy();
+        console.log("ended scheduler");
+        console.log("scheduler response: " + response.ScheduleArn);
         game.stopScheduleArn = response.ScheduleArn;
     }
 
@@ -263,9 +266,13 @@ export async function stopGame(token: string, rawGameId: string, fromSchedule?: 
         try {
             const schedulerClient = new SchedulerClient();
             const command = new DeleteScheduleCommand({
-                Name: `end-game-${rawGameId}`
+                Name: `end-game-${rawGameId}`,
+                GroupName: SCHEDULER_GROUP_NAME
             });
-            schedulerClient.send(command);
+            const response = await schedulerClient.send(command);
+            console.log(response);
+            console.log("deleted scheduler");
+            console.log("scheduler response: " + response.$metadata);
             schedulerClient.destroy();
         } catch(e) {
 

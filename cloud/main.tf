@@ -27,4 +27,5 @@ locals {
     "REFRESH_TOKEN_KEY"         = var.refresh_token_key,
     "ADMIN_CODES"               = var.admin_codes
   }
+  scheduler_group_name = "vulture"
 }

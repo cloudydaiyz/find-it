@@ -9,8 +9,11 @@ let userColl: Collection<UserSchema>;
 let gameColl: Collection<GameSchema>;
 let playerColl: Collection<PlayerSchema>;
 
-// Sets the client for DB queries to a MongoClient with the given URI, and
-// the respective database and collections
+/**
+ * Sets the client for DB queries to a MongoClient with the given URI, and
+ * the respective database and collections
+ * @param uri URI of the MongoDB database
+ */
 export async function setClient(uri: string): Promise<void> {
     const c = new MongoClient(uri);
     if(client) client.close();

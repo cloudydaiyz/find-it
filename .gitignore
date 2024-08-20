@@ -14,6 +14,8 @@ endpoints.ts
 endpoints.js
 endpoints.mjs
 
+secret.py
+
 SECRETS.md
 
 __pycache__

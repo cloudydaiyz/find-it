@@ -1,6 +1,10 @@
+from time import sleep
 import update_infra
+import secret
 import requests
 import pytest
+import boto3
+import botocore
 
 # Get all the URLs for our infrastructure
 out = update_infra.main({'output': True, 'plan': False, 'no-prod': False, 'destroy': False})
@@ -16,7 +20,7 @@ def auth_url():
 
 @pytest.fixture
 def game_url():
-    return out['lambda_function_urls']['value']['game']['function_url']
+    return out['game_lambda_function_url']['value']['function_url']
 
 @pytest.fixture
 def players_url():
@@ -71,6 +75,51 @@ def new_game(auth_url, game_url):
     assert res.status_code == 200
 
 @pytest.fixture
+def new_game_with_duration(auth_url, game_url):
+    login = requests.post(auth_url + "/login", json={"username": "kylan", "password": "duncan"})
+    assert login.status_code == 200
+    creds = login.json()
+
+    # should create a game
+    settings = {
+        "name": "test game",
+        "duration": 30,
+        "startTime": 0,
+        "ordered": False,
+        "minPlayers": 1,
+        "maxPlayers": 5,
+        "joinMidGame": False,
+        "numRequiredTasks": 0
+    }
+    tasks = [{
+        "type": "multiple choice",
+        "question": "What is today's day?",
+        "clue": "Nothing",
+        "answerChoices": ["Monday", "Someday", "Sunday"],
+        "answers": [2],
+        "attempts": 1,
+        "required": True,
+        "points": 25,
+        "scalePoints": False
+    }]
+    res = requests.post(game_url + "/games", 
+                        json={"settings": settings, "tasks": tasks}, 
+                        headers={"token": creds['accessToken']})
+    print(res.text)
+    assert res.status_code == 200
+    res_json = res.json()
+
+    host_creds = res_json['creds']
+    game_id = res_json['gameid']
+    task_ids = res_json['taskids']
+    yield (host_creds, game_id, task_ids)
+
+    # Delete the game
+    res = requests.delete(game_url + "/games/" + game_id, 
+                        headers={"token": host_creds['accessToken']})
+    assert res.status_code == 200
+
+@pytest.fixture
 def new_game_with_player(new_game, auth_url, players_url):
     (host_creds, game_id, task_ids) = new_game
 
@@ -105,7 +154,6 @@ def new_running_game_with_player(new_game_with_player, game_url):
                         json={"action": "stop"},
                         headers = {"token": host_creds["accessToken"]})
     assert res.status_code == 200
-
 
 '''
 ### TESTS ###
@@ -164,7 +212,6 @@ class TestGame:
         res = requests.post(f"{game_url}/games/{game_id}",
                             json={"action": "start"},
                             headers = {"token": host_creds["accessToken"]})
-        print(res.text)
         assert res.status_code == 200
 
         # should end a game
@@ -178,6 +225,64 @@ class TestGame:
                             json={"action": "restart"},
                             headers = {"token": host_creds["accessToken"]})
         assert res.status_code == 200
+    
+    # Tests the new_game_with_duration fixture
+    def test_game_with_duration(self, new_game_with_duration, auth_url, players_url, game_url):
+        (host_creds, game_id, task_ids) = new_game_with_duration
+        
+        # login
+        player_login = requests.post(auth_url + "/login", json={"username": "another", "password": "person"})
+        assert player_login.status_code == 200
+        creds = player_login.json()
+
+        # join the new game
+        res = requests.post(f"{players_url}/games/{game_id}/players", 
+                            json={"role": "player"}, 
+                            headers={"token": creds['accessToken']})
+        assert res.status_code == 200
+
+        # start the new game
+        res = requests.post(f"{game_url}/games/{game_id}",
+                            json={"action": "start"},
+                            headers = {"token": host_creds["accessToken"]})
+        print(res.text)
+        assert res.status_code == 200
+
+        # Ensure the schedule is created
+        session = boto3.Session(profile_name=secret.profile, region_name="us-east-2")
+        scheduler_client = session.client('scheduler')
+        print(game_id)
+        schedule = scheduler_client.get_schedule(
+            GroupName='vulture',
+            Name=f'end-game-{game_id}'
+        )
+        print(schedule['Arn'])
+
+        # Need to sleep longer than 30 seconds because of delay from EventBridge
+        sleep(90)
+
+        # Ensure the schedule is deleted
+        try:
+            schedule = scheduler_client.get_schedule(
+                GroupName='vulture',
+                Name=f'end-game-{game_id}'
+            )
+            raise UserWarning("Schedule should've been deleted")
+        except botocore.exceptions.ClientError as error:
+            print("Schedule deleted correctly")
+            print(error.response)
+        except Exception:
+            raise Exception("Invalid state; schedule exists when it's supposed to be deleted")
+        finally:
+            scheduler_client.close()
+        
+        # Ensure the game has ended
+        res = requests.get(f"{game_url}/games/{game_id}?public=false",
+                        headers = {"token": host_creds["accessToken"]})
+        print(res.text)
+        assert res.status_code == 200
+        assert res.json()['state'] == 'ended'
+
 
 class TestPlayers:
 
@@ -210,7 +315,6 @@ class TestPlayers:
         (host_creds, game_id, task_ids, player_creds) = new_game_with_player
 
         res = requests.get(f"{players_url}/games/{game_id}/players/another?public=true")
-        print(res.text)
         assert res.status_code == 200
 
     # should view a private player
@@ -219,7 +323,6 @@ class TestPlayers:
 
         res = requests.get(f"{players_url}/games/{game_id}/players/another?public=false", 
                             headers={"token": host_creds['accessToken']})
-        print(res.text)
         assert res.status_code == 200
 
     # players should be able to view their own info

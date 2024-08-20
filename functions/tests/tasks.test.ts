@@ -8,7 +8,7 @@ jest.mock("mongodb");
 
 // import { TaskSubmissionConfirmation } from "@cloudydaiyz/vulture-lib";
 import { viewAllTasks, viewAllPublicTasks, viewTask, viewPublicTask, submitTask } from "@cloudydaiyz/vulture-lib";
-import { createEvent, exampleCallback, exampleContext } from "../src/utils";
+import { createEvent, exampleCallback, exampleContext } from "./utils";
 
 afterAll(async () => { 
     jest.restoreAllMocks();
