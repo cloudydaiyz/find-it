@@ -4,8 +4,6 @@ import { Path } from "path-parser";
 import assert from "assert";
 import { z } from "zod";
 
-assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
-
 const playersPath = Path.createPath('/games/:gameid/players');
 const playerPath = Path.createPath('/games/:gameid/players/:username');
 
@@ -14,7 +12,7 @@ const joinGameBodyParser = z.object({
     code: z.string().optional()
 });
 
-const c = setClient(process.env["MONGODB_CONNECTION_STRING"]);
+const c = setClient();
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
     await c;

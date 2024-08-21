@@ -1,5 +1,7 @@
 // Interface of the Mongo DB
 
+import assert from "assert";
+import { MONGODB_CONNECTION_STRING, MONGODB_PASSWORD, MONGODB_USERNAME } from "./constants";
 import { GameSchema, PlayerSchema, UserSchema } from "./types";
 import { Collection, Db, MongoClient } from "mongodb";
 
@@ -11,14 +13,20 @@ let playerColl: Collection<PlayerSchema>;
 
 /**
  * Sets the client for DB queries to a MongoClient with the given URI, and
- * the respective database and collections
- * @param uri URI of the MongoDB database
+ * the respective database and collections. Must have the following environment
+ * variables set: MONGODB_CONNECTION_STRING, MONGODB_USERNAME (optional), 
+ * MONGODB_PASSWORD (optional).
  */
-export async function setClient(uri: string): Promise<void> {
-    const c = new MongoClient(uri);
-    if(client) client.close();
-
-    client = c;
+export async function setClient(uri?: string): Promise<void> {
+    const dburi = uri || MONGODB_CONNECTION_STRING;
+    assert(dburi, "Unset mongo DB connection string");
+    client = new MongoClient(dburi, {
+        auth: {
+            username: MONGODB_USERNAME,
+            password: MONGODB_PASSWORD
+        },
+        authSource: "admin"
+    });
     client = await client.connect();
     await client.db("admin").command({ ping: 1 });
 

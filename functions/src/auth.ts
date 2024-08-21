@@ -4,8 +4,6 @@ import { Path } from "path-parser";
 import assert from "assert";
 import { z } from "zod";
 
-assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
-
 const loginParser = z.object({
     username: z.string(),
     password: z.string()
@@ -20,7 +18,7 @@ const loginPath = Path.createPath('/login');
 const refreshPath = Path.createPath('/refresh');
 const userPath = Path.createPath('/user/:username');
 
-const c = setClient(process.env["MONGODB_CONNECTION_STRING"]);
+const c = setClient();
 
 export const handler: LambdaFunctionURLHandler = async(event) => {
     await c;

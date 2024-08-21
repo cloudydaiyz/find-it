@@ -4,8 +4,7 @@ import { Path } from "path-parser";
 import { z } from "zod";
 import assert from "assert";
 
-assert(process.env["MONGODB_CONNECTION_STRING"], "Invalid MongoDB connection string");
-const c = setClient(process.env["MONGODB_CONNECTION_STRING"]);
+const c = setClient();
 
 // Type checking GameSettings, will be moved into lib soon
 const gameSettingsParser = z.object({

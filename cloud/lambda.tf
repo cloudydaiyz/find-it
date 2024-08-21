@@ -175,7 +175,7 @@ resource "aws_lambda_function" "game_controller" {
   role             = aws_iam_role.iam_for_game_lambda.arn
   handler          = "game.handler"
   source_code_hash = data.archive_file.lambda["game"].output_base64sha256
-  timeout = 10
+  timeout          = 10
   layers = [
     aws_lambda_layer_version.lambda_layer.arn
   ]
@@ -183,9 +183,9 @@ resource "aws_lambda_function" "game_controller" {
   runtime = "nodejs20.x"
 
   environment {
-    variables = merge(local.env_vars, { 
-      "SCHEDULER_ROLE_ARN": aws_iam_role.iam_for_scheduler.arn,
-      "SCHEDULER_GROUP_NAME": local.scheduler_group_name
+    variables = merge(local.env_vars, {
+      "SCHEDULER_ROLE_ARN" : aws_iam_role.iam_for_scheduler.arn,
+      "SCHEDULER_GROUP_NAME" : local.scheduler_group_name
     })
   }
 
@@ -202,11 +202,11 @@ resource "aws_lambda_function_url" "game_controller" {
 
 # Creates `endpoints.js` file with the endpoints for each lambda function, use for website
 resource "local_file" "endpointsjs" {
-  content  = templatefile("${path.module}/endpoints.tpl", { 
+  content = templatefile("${path.module}/endpoints.tpl", {
     endpoint_arns = merge(
-      { for k, v in aws_lambda_function_url.controller : k => v.function_url }, 
-      { "game": aws_lambda_function_url.game_controller.function_url }
-    ) 
+      { for k, v in aws_lambda_function_url.controller : k => v.function_url },
+      { "game" : aws_lambda_function_url.game_controller.function_url }
+    )
   })
   filename = "${path.module}/endpoints.js"
 }

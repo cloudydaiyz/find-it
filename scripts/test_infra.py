@@ -14,21 +14,30 @@ out = update_infra.main({'output': True, 'plan': False, 'no-prod': False, 'destr
 ### FIXTURES ###
 '''
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def auth_url():
     return out['lambda_function_urls']['value']['auth']['function_url']
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def game_url():
     return out['game_lambda_function_url']['value']['function_url']
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def players_url():
     return out['lambda_function_urls']['value']['players']['function_url']
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def tasks_url():
     return out['lambda_function_urls']['value']['tasks']['function_url']
+
+@pytest.fixture(scope="module", autouse=True)
+def initial_users(auth_url):
+    requests.post(auth_url + "/register", json={"username": "kylan", "password": "duncan"})
+    requests.post(auth_url + "/register", json={"username": "another", "password": "person"})
+    yield
+    requests.delete(auth_url + "/user/kylan", headers={"code": secret.admincode})
+    requests.delete(auth_url + "/user/another", headers={"code": secret.admincode})
+
 
 @pytest.fixture
 def new_game(auth_url, game_url):
@@ -249,7 +258,7 @@ class TestGame:
         assert res.status_code == 200
 
         # Ensure the schedule is created
-        session = boto3.Session(profile_name=secret.profile, region_name="us-east-2")
+        session = boto3.Session(profile_name=secret.profile, region_name=secret.region)
         scheduler_client = session.client('scheduler')
         print(game_id)
         schedule = scheduler_client.get_schedule(

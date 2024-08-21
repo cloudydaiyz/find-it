@@ -10,3 +10,7 @@ export const ADMIN_CODES = process.env['ADMIN_CODES']?.split(',') || [];
 
 export const SCHEDULER_ROLE_ARN = process.env['SCHEDULER_ROLE_ARN'];
 export const SCHEDULER_GROUP_NAME = process.env['SCHEDULER_GROUP_NAME'];
+
+export const MONGODB_CONNECTION_STRING = process.env['MONGODB_CONNECTION_STRING'];
+export const MONGODB_USERNAME = process.env['MONGODB_USERNAME'];
+export const MONGODB_PASSWORD = process.env['MONGODB_PASSWORD'];
