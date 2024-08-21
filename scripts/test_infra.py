@@ -76,6 +76,7 @@ def new_game(auth_url, game_url):
     host_creds = res_json['creds']
     game_id = res_json['gameid']
     task_ids = res_json['taskids']
+    print(game_id)
     yield (host_creds, game_id, task_ids)
 
     # Delete the game
@@ -121,6 +122,7 @@ def new_game_with_duration(auth_url, game_url):
     host_creds = res_json['creds']
     game_id = res_json['gameid']
     task_ids = res_json['taskids']
+    print(game_id)
     yield (host_creds, game_id, task_ids)
 
     # Delete the game
@@ -233,6 +235,14 @@ class TestGame:
         res = requests.post(f"{game_url}/games/{game_id}?public=true",
                             json={"action": "restart"},
                             headers = {"token": host_creds["accessToken"]})
+        assert res.status_code == 200
+        res_json = res.json()
+        new_host_creds = res_json['creds']
+        new_game_id = res_json['gameid']
+
+        # delete the newly created game from restart
+        res = requests.delete(game_url + "/games/" + new_game_id, 
+                                headers={"token": new_host_creds['accessToken']})
         assert res.status_code == 200
     
     # Tests the new_game_with_duration fixture
