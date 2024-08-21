@@ -9,7 +9,7 @@ Scavenger hunt game. This repository contains the frontend, backend, and infrast
 
 ## Set Up
 1. Create a MongoDB Atlas Organization
-2. Retrieve your account ID from the organization using the `Get All Organization Users` request:
+2. Retrieve your account ID from the organization (or the account ID you want as the project owner) using the `Get All Organization Users` request:
 ```
 curl -i -u "username:apiKey" --digest \
   "https://cloud.mongodb.com/api/public/v1.0/orgs/59db8d1d87d9d6420df0613f/users?pretty=true"
