@@ -14,6 +14,14 @@ def main(args):
     functions_dir = (Path(__file__).parent / ".." / "functions").resolve()
     infra_dir = (Path(__file__).parent / ".." / "cloud").resolve()
 
+    if(args['output']):
+        # `terraform output -json`
+        out = subprocess.run(["terraform", "output", "-json"], cwd=str(infra_dir), capture_output=True, text=True)
+        # print(out.args)
+        # print(out.returncode)
+
+        return json.loads(out.stdout)
+
     if(args['plan']):
 
         if(not args['no_build']):
@@ -23,14 +31,6 @@ def main(args):
         # `terraform plan -var-file="variables.tfvars"`
         subprocess.run(["terraform", "plan", "-var-file=variables.tfvars"], cwd=str(infra_dir))
         return
-    
-    if(args['output']):
-        # `terraform output -json`
-        out = subprocess.run(["terraform", "output", "-json"], cwd=str(infra_dir), capture_output=True, text=True)
-        # print(out.args)
-        # print(out.returncode)
-
-        return json.loads(out.stdout)
     
     if(args['destroy']):
         # `terraform destroy -var-file="variables.tfvars" --auto-approve`

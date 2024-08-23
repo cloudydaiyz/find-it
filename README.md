@@ -1,5 +1,5 @@
 # vulture
-Scavenger hunt game. This repository contains the frontend, backend, and infrastructure.
+Scavenger hunt game. This repository contains the frontend, backend, and infrastructure for the project.
 
 ## Prerequisites
 - `terraform`

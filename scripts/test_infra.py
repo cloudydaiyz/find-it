@@ -7,26 +7,26 @@ import boto3
 import botocore
 
 # Get all the URLs for our infrastructure
-out = update_infra.main({'output': True, 'plan': False, 'no-prod': False, 'destroy': False})
+out = update_infra.main({ 'output': True })
 
 
 '''
 ### FIXTURES ###
 '''
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def auth_url():
     return out['lambda_function_urls']['value']['auth']['function_url']
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def game_url():
     return out['game_lambda_function_url']['value']['function_url']
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def players_url():
     return out['lambda_function_urls']['value']['players']['function_url']
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def tasks_url():
     return out['lambda_function_urls']['value']['tasks']['function_url']
 
