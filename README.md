@@ -1,5 +1,3 @@
-# find-it
-
 <p align="center">
 <img width="200" alt="Screen Shot 2023-03-22 at 11 59 37 PM" src="./assets/logo.svg" />
 </p>
