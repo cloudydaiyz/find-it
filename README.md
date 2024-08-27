@@ -1,6 +1,12 @@
 # find-it
 
-Scavenger hunt game. This repository contains the frontend, backend, and infrastructure for the project.
+<p align="center">
+<img width="200" alt="Screen Shot 2023-03-22 at 11 59 37 PM" src="./assets/logo.svg" />
+</p>
+
+<p align="center">
+This repository contains the frontend, backend, and infrastructure for the project.
+</p>
 
 ## Prerequisites
 
