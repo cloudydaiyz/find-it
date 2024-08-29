@@ -30,7 +30,6 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
   region     = data.aws_region.current.name
   env_vars = {
-    # "MONGODB_CONNECTION_STRING" = var.mongodb_connection_string,
     "MONGODB_CONNECTION_STRING" = mongodbatlas_cluster.main_cluster.connection_strings[0].standard_srv,
     "ACCESS_TOKEN_KEY"          = var.access_token_key,
     "REFRESH_TOKEN_KEY"         = var.refresh_token_key,

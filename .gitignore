@@ -23,6 +23,8 @@ __pycache__
 
 stage
 
+settings*.json
+
 # Local .terraform directories
 **/.terraform/*
 

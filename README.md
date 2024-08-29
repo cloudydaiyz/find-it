@@ -2,6 +2,8 @@
 <img width="200" alt="Screen Shot 2023-03-22 at 11 59 37 PM" src="./assets/logo.svg" />
 </p>
 
+# find-it
+
 <p align="center">
 This repository contains the frontend, backend, and infrastructure for the project.
 </p>

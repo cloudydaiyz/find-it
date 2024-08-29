@@ -1,8 +1,3 @@
-variable "mongodb_connection_string" {
-  type        = string
-  description = "url for MongoDB Atlas database"
-}
-
 variable "access_token_key" {
   type        = string
   description = "string for your access token key"
