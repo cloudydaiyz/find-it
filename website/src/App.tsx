@@ -17,7 +17,7 @@ function App() {
         </a>
       </div>
       <h1>Vite + React</h1>
-      <h2>WIP </h2>
+      <h2>WIP</h2>
       <p>
         You can view the <code>.fig</code> design in{" "}
         <code>assets/find-it.fig</code>.
