@@ -4,9 +4,7 @@
 
 # find-it
 
-<p align="center">
 This repository contains the frontend, backend, and infrastructure for the project.
-</p>
 
 ## Prerequisites
 
