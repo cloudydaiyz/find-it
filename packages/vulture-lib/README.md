@@ -2,7 +2,7 @@
 
 [View on NPM](https://www.npmjs.com/package/@cloudydaiyz/vulture-lib)
 
-Official NPM package for the `vulture` project. This is a backend library that contains utility functions for interacting with various games via MongoDB Atlas database.
+Deprecated NPM package for the `vulture` project. This is a backend library that contains utility functions for interacting with various games via MongoDB Atlas database.
 
 In order for the functions to run correctly, you must have these environment variables set:
 - `ACCESS_TOKEN_KEY` - string for your access token key

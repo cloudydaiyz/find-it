@@ -10,7 +10,7 @@
       "runtimeArgs": ["test"],
       "runtimeExecutable": "npm",
       "skipFiles": ["<node_internals>/**"],
-      "cwd": "${workspaceFolder}/library",
+      "cwd": "${workspaceFolder}/packages/library",
       "type": "node"
     },
     {
