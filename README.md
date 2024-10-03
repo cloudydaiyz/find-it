@@ -1,4 +1,4 @@
-# scavenger-hunt
+# vulture
 
 This repository contains the backend and infrastructure for the project.
 
