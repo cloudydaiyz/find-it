@@ -1,14 +1,6 @@
-<p align="center">
-<img alt="Screen Shot 2023-03-22 at 11 59 37 PM" src="./assets/logo.svg" />
-</p>
+# scavenger-hunt
 
-<h1 align="center">
-<sup>find-it</sup>
-</h1>
-
-<p align="center">
-This repository contains the frontend, backend, and infrastructure for the project.
-</p>
+This repository contains the backend and infrastructure for the project.
 
 ## Prerequisites
 
